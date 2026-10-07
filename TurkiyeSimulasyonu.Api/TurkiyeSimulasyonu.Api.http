@@ -1,6 +1,9 @@
 @TurkiyeSimulasyonu.Api_HostAddress = http://localhost:5267
 
-
+### Doğru istek → 200 + order'a göre sıralı 4 kategori
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
 Accept: application/json
 
-###
+### Bilerek bozuk: doğru adres, yanlış metot → 405
+POST {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
+
