@@ -1,4 +1,4 @@
-@TurkiyeSimulasyonu.Api_HostAddress = http://localhost:5267
+@TurkiyeSimulasyonu.Api_HostAddress = https://localhost:7129
 
 ### Doğru istek → 200 + order'a göre sıralı 4 kategori
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
