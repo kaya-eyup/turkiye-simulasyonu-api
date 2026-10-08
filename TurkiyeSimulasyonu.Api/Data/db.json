@@ -1,0 +1,321 @@
+{
+  "categories": [
+    {
+      "id": "yemek-kulturu",
+      "name": "Yemek Kültürü",
+      "emoji": "🍽️",
+      "order": 1
+    },
+
+    { "id": "sehir-ilce", "name": "Şehir/İlçe", "emoji": "🏙️", "order": 2 },
+    {
+      "id": "adet-gelenekler",
+      "name": "Adet/Gelenekler",
+      "emoji": "🧿",
+      "order": 3
+    },
+    { "id": "absurtluk", "name": "Absürtlük", "emoji": "🤪", "order": 4 }
+  ],
+
+  "items": [
+    {
+      "id": "kebap",
+      "categoryId": "yemek-kulturu",
+      "name": "Kebap",
+      "emoji": "🥙",
+      "summary": "Türk mutfağının yurt dışındaki değişmez elçisi.",
+      "distribution": [2, 1, 5, 12, 30],
+      "createdAt": "2026-09-20T10:00:00.000Z"
+    },
+    {
+      "id": "baklava",
+      "categoryId": "yemek-kulturu",
+      "name": "Baklava",
+      "emoji": "🍯",
+      "summary": "Fıstıklı mı cevizli mi tartışmalarının değişmez öznesi.",
+      "distribution": [40, 3, 2, 4, 38],
+      "createdAt": "2026-09-21T14:30:00.000Z"
+    },
+    {
+      "id": "izmir-boyozu",
+      "categoryId": "yemek-kulturu",
+      "name": "İzmir Boyozu",
+      "emoji": "🥐",
+      "summary": "İzmir'in vazgeçilmez sabah lezzeti. Yanında fırınlanmış yumurta ve sübye ile tüketildiğinde güne başlamanın en güzel yoludur, ancak diğer şehirlerde gerçek tadını ve o yağlı çıtırlığını bulmak neredeyse imkansızdır.",
+      "distribution": [5, 2, 10, 15, 20],
+      "createdAt": "2026-09-22T08:15:00.000Z"
+    },
+    {
+      "id": "van-peyniri",
+      "categoryId": "yemek-kulturu",
+      "name": "Van Otlu Peyniri",
+      "emoji": "🧀",
+      "summary": "İçindeki dağ kekikleriyle meşhur yöresel kahvaltılık.",
+      "distribution": [0, 0, 0, 0, 0],
+      "createdAt": "2026-09-28T09:00:00.000Z"
+    },
+    {
+      "id": "doner",
+      "categoryId": "yemek-kulturu",
+      "name": "Döner",
+      "emoji": "🌯",
+      "summary": "Öğrencinin de çalışanın da en hızlı kurtarıcısı.",
+      "distribution": [1, 3, 8, 25, 45],
+      "createdAt": "2026-09-23T12:45:00.000Z"
+    },
+    {
+      "id": "cig-kofte",
+      "categoryId": "yemek-kulturu",
+      "name": "Çiğ Köfte",
+      "emoji": "🌶️",
+      "summary": "Gece acıkmalarının bir numaralı adresi.",
+      "distribution": [3, 2, 5, 20, 35],
+      "createdAt": "2026-09-24T22:30:00.000Z"
+    },
+
+    {
+      "id": "istanbul-trafigi",
+      "categoryId": "sehir-ilce",
+      "name": "İstanbul Trafiği",
+      "emoji": "🚗",
+      "summary": "Ömrünüzden yılları çalma garantili kentsel fenomen.",
+      "distribution": [50, 20, 5, 2, 1],
+      "createdAt": "2026-09-20T17:00:00.000Z"
+    },
+    {
+      "id": "izmir-kordon",
+      "categoryId": "sehir-ilce",
+      "name": "İzmir Kordon",
+      "emoji": "🌅",
+      "summary": "Çimlerde oturup çekirdek çitleyerek güneşin batışını izleme ritüeli.",
+      "distribution": [1, 2, 5, 18, 40],
+      "createdAt": "2026-09-25T19:00:00.000Z"
+    },
+    {
+      "id": "adana-sicagi",
+      "categoryId": "sehir-ilce",
+      "name": "Adana Sıcağı",
+      "emoji": "☀️",
+      "summary": "Güneşe ateş etme seviyesine getiren efsanevi iklim koşulu.",
+      "distribution": [45, 5, 2, 3, 40],
+      "createdAt": "2026-09-21T13:00:00.000Z"
+    },
+    {
+      "id": "eskisehir-ogrenci-hayati",
+      "categoryId": "sehir-ilce",
+      "name": "Eskişehir Öğrenci Hayatı",
+      "emoji": "🎒",
+      "summary": "Soğuğuna rağmen Porsuk kenarında öğrenci olmanın getirdiği o eşsiz rahatlık. Barlar sokağı, uygun fiyatlı kafeler ve bisiklet yollarıyla Anadolu'nun ortasında kendi başına bir cumhuriyet gibi hissettirir.",
+      "distribution": [2, 1, 3, 10, 30],
+      "createdAt": "2026-09-26T11:20:00.000Z"
+    },
+    {
+      "id": "ankara-ayazi",
+      "categoryId": "sehir-ilce",
+      "name": "Ankara Ayazı",
+      "emoji": "🥶",
+      "summary": "İnsanın içini donduran, kemiklere işleyen kuru soğuk.",
+      "distribution": [30, 15, 10, 5, 2],
+      "createdAt": "2026-09-22T08:00:00.000Z"
+    },
+    {
+      "id": "antalya-nemi",
+      "categoryId": "sehir-ilce",
+      "name": "Antalya Nemi",
+      "emoji": "💧",
+      "summary": "Nefes almayı zorlaştıran yazlık sauna etkisi.",
+      "distribution": [0, 0, 0, 0, 0],
+      "createdAt": "2026-09-28T10:15:00.000Z"
+    },
+
+    {
+      "id": "mahalle-dugunleri",
+      "categoryId": "adet-gelenekler",
+      "name": "Mahalle Düğünleri",
+      "emoji": "💃",
+      "summary": "Sokak arası eğlencenin ve coşkunun zirvesi.",
+      "distribution": [2, 3, 10, 20, 25],
+      "createdAt": "2026-09-23T20:00:00.000Z"
+    },
+    {
+      "id": "misafirlikte-terlik",
+      "categoryId": "adet-gelenekler",
+      "name": "Misafirlikte Terlik",
+      "emoji": "🩴",
+      "summary": "Türk misafirperverliğinin en temel taşlarından biri olan, misafire kapıda zorla giydirilen o meşhur terlikler. Genelde misafirin ayak numarasından ya çok büyük ya da çok küçük olurlar ve asla ev sahibinin kendi giydiği o ortopedik terlik kadar rahat değillerdir.",
+      "distribution": [15, 10, 20, 15, 10],
+      "createdAt": "2026-09-24T15:30:00.000Z"
+    },
+    {
+      "id": "tuzlu-kahve",
+      "categoryId": "adet-gelenekler",
+      "name": "Kız İsteme Tuzlu Kahvesi",
+      "emoji": "☕",
+      "summary": "Damat adayının sabır ve tahammül sınavı.",
+      "distribution": [35, 10, 5, 10, 30],
+      "createdAt": "2026-09-21T18:45:00.000Z"
+    },
+    {
+      "id": "ceyiz-serme",
+      "categoryId": "adet-gelenekler",
+      "name": "Çeyiz Serme",
+      "emoji": "🛏️",
+      "summary": "Evlilik öncesi eşyaların akrabalara sergilendiği ritüel.",
+      "distribution": [0, 0, 0, 0, 0],
+      "createdAt": "2026-09-28T11:00:00.000Z"
+    },
+    {
+      "id": "altin-gunu",
+      "categoryId": "adet-gelenekler",
+      "name": "Altın Günü",
+      "emoji": "🪙",
+      "summary": "Kısır, börek ve dedikodu üçgenindeki ekonomik döngü.",
+      "distribution": [3, 2, 10, 25, 35],
+      "createdAt": "2026-09-25T14:00:00.000Z"
+    },
+    {
+      "id": "asker-ugurlamasi",
+      "categoryId": "adet-gelenekler",
+      "name": "Asker Uğurlaması",
+      "emoji": "🇹🇷",
+      "summary": "Otogarlarda yaşanan hüzünlü ama bir o kadar da gürültülü anlar.",
+      "distribution": [5, 10, 15, 20, 10],
+      "createdAt": "2026-09-26T21:30:00.000Z"
+    },
+
+    {
+      "id": "kaza-yapan-kamyonla-halay",
+      "categoryId": "absurtluk",
+      "name": "Kaza Yapan Kamyonla Halay",
+      "emoji": "🚛",
+      "summary": "Trajediyi eğlenceye çeviren o inanılmaz kafa yapısı.",
+      "distribution": [1, 2, 5, 10, 45],
+      "createdAt": "2026-09-20T16:20:00.000Z"
+    },
+    {
+      "id": "yol-calismasi-izleme",
+      "categoryId": "absurtluk",
+      "name": "Yol Çalışması İzleme",
+      "emoji": "🚧",
+      "summary": "Özellikle emekli amcaların ellerini arkada bağlayarak saatlerce süren bir odaklanmayla kepçeleri izlemesi durumu. Adeta yazılı olmayan bir kural gibi, Türkiye'deki her şantiyenin başında en az bir fahri müfettiş bulunur ve iş makinesi operatörüne psikolojik baskı yapar.",
+      "distribution": [1, 1, 2, 15, 50],
+      "createdAt": "2026-09-22T10:30:00.000Z"
+    },
+    {
+      "id": "sabah-kusagi-programlari",
+      "categoryId": "absurtluk",
+      "name": "Sabah Kuşağı Programları",
+      "emoji": "🔎",
+      "summary": "Gerilim filmlerine taş çıkartan sabah kuşağı olayları.",
+      "distribution": [42, 3, 1, 4, 38],
+      "createdAt": "2026-09-27T10:00:00.000Z"
+    },
+    {
+      "id": "poset-parali-alisveris",
+      "categoryId": "absurtluk",
+      "name": "Poşet Paralı Olunca Tepkiler",
+      "emoji": "🛒",
+      "summary": "Markete el arabasıyla gitme seviyesine varan sivil itaatsizlikler.",
+      "distribution": [0, 0, 0, 0, 0],
+      "createdAt": "2026-09-28T09:30:00.000Z"
+    },
+    {
+      "id": "belediye-mizahi",
+      "categoryId": "absurtluk",
+      "name": "Belediye Twitter Mizahı",
+      "emoji": "🏛️",
+      "summary": "Resmi kurumların Z kuşağı ile etkileşime girme çabaları.",
+      "distribution": [10, 15, 20, 10, 5],
+      "createdAt": "2026-09-24T11:45:00.000Z"
+    },
+    {
+      "id": "metrobus-kosusu",
+      "categoryId": "absurtluk",
+      "name": "Boş Metrobüs Koşusu",
+      "emoji": "🏃",
+      "summary": "Kapı açıldığı an başlayan hayatta kalma mücadelesi.",
+      "distribution": [5, 8, 15, 20, 25],
+      "createdAt": "2026-09-26T08:15:00.000Z"
+    }
+  ],
+
+  "comments": [
+    {
+      "id": "c-001",
+      "itemId": "kebap",
+      "author": "anonim",
+      "body": "Adana'da yenmedikçe sadece et yediğinizi sanıyorsunuz.",
+      "createdAt": "2026-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "c-002",
+      "itemId": "baklava",
+      "author": "anonim",
+      "body": "Cevizli baklava yiyen kendine saygısını kaybetmiştir, net.",
+      "createdAt": "2026-09-22T15:20:00.000Z"
+    },
+    {
+      "id": "c-003",
+      "itemId": "baklava",
+      "author": "anonim",
+      "body": "Fıstık lobisi yine iş başında, iyi yapılmış ev baklavası cevizli olur.",
+      "createdAt": "2026-09-22T16:05:00.000Z"
+    },
+    {
+      "id": "c-004",
+      "itemId": "izmir-boyozu",
+      "author": "anonim",
+      "body": "Dışarıda ne kadar ararsan ara, o Alsancak'taki fırının tadını bulamıyorsun.",
+      "createdAt": "2026-09-23T09:15:00.000Z"
+    },
+    {
+      "id": "c-005",
+      "itemId": "istanbul-trafigi",
+      "author": "anonim",
+      "body": "Geçen gün köprüde dururken yan arabadakilerle piknik yaptık, şaka değil.",
+      "createdAt": "2026-09-21T18:30:00.000Z"
+    },
+    {
+      "id": "c-006",
+      "itemId": "adana-sicagi",
+      "author": "anonim",
+      "body": "Asfaltın eridiğini gözlerimle gördüm, ayakkabım yola yapıştı.",
+      "createdAt": "2026-09-22T14:00:00.000Z"
+    },
+    {
+      "id": "c-007",
+      "itemId": "misafirlikte-terlik",
+      "author": "anonim",
+      "body": "44 numara ayağıma 38 numara tüylü terlik giydirdiler, parmak uçlarımda yürümek zorunda kaldım.",
+      "createdAt": "2026-09-25T10:20:00.000Z"
+    },
+    {
+      "id": "c-008",
+      "itemId": "tuzlu-kahve",
+      "author": "anonim",
+      "body": "Benimkine karabiber, pul biber ne varsa atmışlar. Hastanelik oluyordum az kalsın.",
+      "createdAt": "2026-09-22T21:10:00.000Z"
+    },
+    {
+      "id": "c-009",
+      "itemId": "kaza-yapan-kamyonla-halay",
+      "author": "anonim",
+      "body": "Mükemmel bir sinir boşalması yöntemi. Stresle başa çıkma konusunda dünya markasıyız.",
+      "createdAt": "2026-09-21T17:45:00.000Z"
+    },
+    {
+      "id": "c-010",
+      "itemId": "yol-calismasi-izleme",
+      "author": "anonim",
+      "body": "Dün babamı kepçe izlerken buldum, eli arkasında 'orayı yanlış alıyor' diyordu.",
+      "createdAt": "2026-09-23T11:30:00.000Z"
+    },
+    {
+      "id": "c-011",
+      "itemId": "sabah-kusagi-programlari",
+      "author": "anonim",
+      "body": "Senaryo diye Netflix'e versen bu kadar da olmaz deyip reddederler.",
+      "createdAt": "2026-09-28T08:20:00.000Z"
+    }
+  ]
+}
