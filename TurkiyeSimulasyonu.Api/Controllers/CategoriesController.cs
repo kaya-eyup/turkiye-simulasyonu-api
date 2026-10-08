@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TurkiyeSimulasyonu.Api.Models;
+using TurkiyeSimulasyonu.Api.Data;
+
 
 namespace TurkiyeSimulasyonu.Api.Controllers;
 
@@ -7,18 +9,17 @@ namespace TurkiyeSimulasyonu.Api.Controllers;
 [Route("categories")]
 public class CategoriesController : ControllerBase
 {
-    private static readonly Category[] Categories =
-    [
-   new("adet-gelenekler", "Adet/Gelenekler", "🧿", 3),
-   new("yemek-kulturu", "Yemek Kültürü", "🍽️", 1),
-   new("absurtluk", "Absürtlük", "🤪", 4),
-   new("sehir-ilce", "Şehir/İlçe", "🏙️", 2)
-    ];
 
+    private readonly SeedData _data;
+
+    public CategoriesController(SeedData data)
+    {
+        _data = data;
+    }
     [HttpGet]
     public ActionResult<List<Category>> GetAll()
     {
-        var result = Categories
+        var result = _data.Categories
             .OrderBy(c => c.Order)
             .ToList();
 
