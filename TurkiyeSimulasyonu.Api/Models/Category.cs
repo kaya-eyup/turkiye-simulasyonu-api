@@ -1,6 +1,5 @@
-﻿namespace TurkiyeSimulasyonu.Api.Models
-{
+﻿namespace TurkiyeSimulasyonu.Api.Models;
 
-    public record Category(string Id, string Name, string Emoji, int Order);
-   
-}
+
+public record Category(string Id, string Name, string Emoji, int Order);
+

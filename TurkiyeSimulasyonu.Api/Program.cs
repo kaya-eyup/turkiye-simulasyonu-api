@@ -1,3 +1,5 @@
+using TurkiyeSimulasyonu.Api.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+var seedPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "db.json");
+var seedData = SeedDataReader.Read(seedPath);
+builder.Services.AddSingleton(seedData);
 
 var app = builder.Build();
 
