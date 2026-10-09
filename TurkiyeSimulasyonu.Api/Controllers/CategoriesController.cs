@@ -25,4 +25,19 @@ public class CategoriesController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet("{id}")]
+    public ActionResult<Category> GetById(string id)
+    {
+        var category = _data.Categories.FirstOrDefault(c => c.Id == id);
+
+        if (category is null)
+        {
+            return NotFound();
+        }
+
+        
+        return Ok(category);
+    }
+
 }

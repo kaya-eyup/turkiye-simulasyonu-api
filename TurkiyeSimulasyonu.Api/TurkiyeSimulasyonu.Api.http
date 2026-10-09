@@ -7,3 +7,10 @@ Accept: application/json
 ### Bilerek bozuk: doğru adres, yanlış metot → 405
 POST {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
 
+### Doğru istek → 200 + tek kategori
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories/sehir-ilce
+Accept: application/json
+
+### Bilerek bozuk: olmayan id → 404
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories/olmayan-kategori
+
