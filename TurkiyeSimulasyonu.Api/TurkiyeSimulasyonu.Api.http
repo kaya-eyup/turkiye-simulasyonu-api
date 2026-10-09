@@ -14,3 +14,12 @@ Accept: application/json
 ### Bilerek bozuk: olmayan id → 404
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories/olmayan-kategori
 
+### Doğru istek → 200 + tek öğe
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/kebap
+Accept: application/json
+
+### Bilerek bozuk: olmayan id → 404
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/olmayan-oge
+ 
+### Bilerek bozuk: var olan id, büyük harfle → (ölçünce yaz)
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/KEBAP
