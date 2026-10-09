@@ -23,3 +23,17 @@ GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/olmayan-oge
  
 ### Bilerek bozuk: var olan id, büyük harfle → (ölçünce yaz)
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/KEBAP
+
+### Doğru istek → 200 + sadece o kategorinin öğeleri
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=yemek-kulturu
+Accept: application/json
+
+### Doğru istek → 200 + 24 öğe (frontend'in arama sayfası bunu kullanıyor)
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items
+Accept: application/json
+
+### Bilerek bozuk: olmayan kategori → 200 + []
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=olmayan-kategori
+
+### Gözlem: değeri boş süzgeç → bütün liste
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=

@@ -25,4 +25,21 @@ public class ItemsController : ControllerBase
         }
         return Ok(item);
     }
+    [HttpGet]
+    public ActionResult<List<Item>> GetAll(string? categoryId)
+    {
+        // 1. Başlangıç: Sorguyu bir IEnumerable (plan) olarak başlat.
+        // AsEnumerable() diyerek bunun henüz bitmiş bir liste olmadığını, 
+        // üzerine filtreler eklenebilecek bir veri kümesi olduğunu belirtiyoruz.
+        IEnumerable<Item> query = _data.Items.AsEnumerable();
+
+        // 2. Filtre Zinciri
+        if (!string.IsNullOrWhiteSpace(categoryId))
+        {
+            query = query.Where(i => i.CategoryId == categoryId);
+        }
+
+        // 3. Çalıştırma: ToList() çağrıldığı an yukarıdaki tüm filtreler hesaplanır.
+        return Ok(query.ToList());
+    }
 }
