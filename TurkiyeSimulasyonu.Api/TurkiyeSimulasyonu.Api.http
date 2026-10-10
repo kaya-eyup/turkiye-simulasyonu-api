@@ -37,3 +37,21 @@ GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=olmayan-kategori
 
 ### Gözlem: değeri boş süzgeç → bütün liste
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=
+
+
+### Doğru istek → 200 + 2 yorum; önce c-003 (16:05), sonra c-002 (15:20). Dosyada sıra tersi
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=baklava
+Accept: application/json
+
+### Doğru istek (frontend'in gerçek isteği) → aynı sonuç; _sort yok sayılır
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=baklava&_sort=-createdAt
+Accept: application/json
+
+### Bilerek bozuk: itemId yok → 400, errors.itemId
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+
+### Bilerek bozuk: itemId boş → (tahminini yaz, sonra ölç)
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=
+
+### Bilerek bozuk: olmayan öğe → 200 + []
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=olmayan-oge
