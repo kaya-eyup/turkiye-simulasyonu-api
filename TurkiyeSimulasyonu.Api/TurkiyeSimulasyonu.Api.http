@@ -55,3 +55,12 @@ GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=
 
 ### Bilerek bozuk: olmayan öğe → 200 + []
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=olmayan-oge
+
+### CORS: izinli origin → 200 + Access-Control-Allow-Origin: http://localhost:5173
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
+Origin: http://localhost:5173
+
+### Bilerek bozuk: izinsiz origin →  200, Access-Control-Allow-Origin yok (sunucu reddetmez, tarayıcı engeller)
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
+Origin: https://baska-site.example
+
