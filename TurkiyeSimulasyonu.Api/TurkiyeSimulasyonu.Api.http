@@ -21,7 +21,7 @@ Accept: application/json
 ### Bilerek bozuk: olmayan id → 404
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/olmayan-oge
  
-### Bilerek bozuk: var olan id, büyük harfle → (ölçünce yaz)
+### Bilerek bozuk: var olan id, büyük harfle →  404 (slug küçük harf sözleşmesi)
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/KEBAP
 
 ### Doğru istek → 200 + sadece o kategorinin öğeleri
@@ -50,7 +50,7 @@ Accept: application/json
 ### Bilerek bozuk: itemId yok → 400, errors.itemId
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
 
-### Bilerek bozuk: itemId boş → (tahminini yaz, sonra ölç)
+### Bilerek bozuk: itemId boş →  400, errors.itemId (boş değer null'a çevrilir, ?'siz parametre zorunlu)
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=
 
 ### Bilerek bozuk: olmayan öğe → 200 + []
@@ -60,7 +60,7 @@ GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=olmayan-oge
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
 Origin: http://localhost:5173
 
-### Bilerek bozuk: izinsiz origin →  200, Access-Control-Allow-Origin yok (sunucu reddetmez, tarayıcı engeller)
+### Bilerek bozuk: izinsiz origin → 200, Access-Control-Allow-Origin yok (sunucu reddetmez, tarayıcı engeller)
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
 Origin: https://baska-site.example
 
