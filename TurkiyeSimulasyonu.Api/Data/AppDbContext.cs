@@ -44,12 +44,12 @@ public sealed class AppDbContext : DbContext
 
         modelBuilder.Entity<Comment>(comment =>
         {
-            // SEN: Author (30), Body (500)
+            // 30 ve 500 sözleşmeden (sunucu doğrulaması Gün 55)
             comment.Property(co => co.Author).HasMaxLength(30);
             comment.Property(co => co.Body).HasMaxLength(500);
 
 
-            // SEN: ilişki. Her yorum bir öğeye ait; öğe silinirse yorumları da silinsin
+            // Yorum, öğesi olmadan anlamsız; öğe silinirse yorumları da silinir
             comment.HasOne(co => co.Item)
                    .WithMany(i => i.Comments)
                    .HasForeignKey(co => co.ItemId)
