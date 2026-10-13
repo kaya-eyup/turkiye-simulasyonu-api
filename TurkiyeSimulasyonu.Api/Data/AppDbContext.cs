@@ -48,7 +48,6 @@ public sealed class AppDbContext : DbContext
             comment.Property(co => co.Author).HasMaxLength(30);
             comment.Property(co => co.Body).HasMaxLength(500);
 
-
             // Yorum, öğesi olmadan anlamsız; öğe silinirse yorumları da silinir
             comment.HasOne(co => co.Item)
                    .WithMany(i => i.Comments)

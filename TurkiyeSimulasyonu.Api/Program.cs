@@ -13,7 +13,8 @@ var seedPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "db.jso
 var seedData = SeedDataReader.Read(seedPath);
 builder.Services.AddSingleton(seedData);
 
-// Connection string eksikse uygulamanın açılışta hemen çökmesi (Fail Fast) ve adresin her istekte değil yalnızca açılışta bir kez okunması için dışarıda tanımlandı.
+// Connection string eksikse uygulamanın açılışta açılmaması (Fail Fast)-
+// ve adresin her istekte değil yalnızca açılışta bir kez okunması için dışarıda tanımlandı.
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' not found.");
 
