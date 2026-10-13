@@ -6,7 +6,7 @@ Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu: API o tablodak
 
 ## Durum
 
-Taslak. Sözleşmenin okuma uçları hazır ve React uygulaması geliştirmede bu API'den okuyor. Veri henüz veritabanında değil: `Data/db.json` uygulama açılırken bir kez belleğe okunur. Yazma ucu yok.
+Taslak. Sözleşmenin okuma uçları hazır ve React uygulaması geliştirmede bu API'den okuyor. Veri henüz veritabanında değil: `Data/db.json` uygulama açılırken bir kez belleğe okunur. Veri modeli ve `AppDbContext` tanımlı, ama veritabanı henüz oluşturulmadı (migration yok). Yazma ucu yok.
 
 ## Çalıştırma
 
@@ -30,6 +30,49 @@ Taslak. Sözleşmenin okuma uçları hazır ve React uygulaması geliştirmede b
 - Tanınmayan query parametreleri yok sayılır (ör. json-server'dan kalma `_sort`).
 - Desteklenmeyen metot → 405.
 
+## Veri modeli
+
+Model `Data/AppDbContext.cs`'te tanımlı (entity'ler `Entities/` altında); tablolar henüz oluşturulmadı.
+
+### Tablolar
+
+- **Categories**
+  - `Id`: int, birincil anahtar; numarayı veritabanı verir (identity).
+  - `Slug`: metin, zorunlu, en fazla 100 karakter, tekil.
+  - `Name`: metin, zorunlu, en fazla 100 karakter.
+  - `Emoji`: metin, zorunlu, en fazla 32 karakter.
+  - `DisplayOrder`: int, zorunlu.
+- **Items**
+  - `Id`: int, birincil anahtar (identity).
+  - `CategoryId`: int, zorunlu; foreign key → `Categories.Id`.
+  - `Slug`: metin, zorunlu, en fazla 100 karakter, tekil.
+  - `Name`: metin, zorunlu, en fazla 100 karakter.
+  - `Emoji`: metin, zorunlu, en fazla 32 karakter.
+  - `Summary`: metin, zorunlu, en fazla 500 karakter.
+  - `Score1Count` … `Score5Count`: int, zorunlu; her puanın aldığı oy sayısı.
+  - `CreatedAt`: `DateTimeOffset`, zorunlu.
+- **Comments**
+  - `Id`: int, birincil anahtar (identity).
+  - `ItemId`: int, zorunlu; foreign key → `Items.Id`.
+  - `Author`: metin, zorunlu, en fazla 30 karakter.
+  - `Body`: metin, zorunlu, en fazla 500 karakter.
+  - `CreatedAt`: `DateTimeOffset`, zorunlu.
+
+Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsayılan index'i var: bir öğenin yorumları bütün tablo okunmadan bulunur.
+
+### İlişkiler ve silme
+
+- **Kategori → öğe (1-N):** Öğesi olan kategori silinemez (`Restrict`).
+- **Öğe → yorum (1-N):** Öğe silinirse yorumları da silinir (`Cascade`).
+
+### Kararlar
+
+- **Değişmeyen sayı anahtar + ayrı tekil slug.** Tablolar arası bağlar sayıya kurulu; slug düzeltildiğinde hiçbir bağ kopmaz.
+- **Dağılım 5 ayrı sütun.** Oy geldiğinde sayaç veritabanında tek komutla artırılabilsin diye (`SET Score4Count = Score4Count + 1`). Dağılım tek hücrede JSON dizi olarak tutulsaydı bu mümkün olmazdı: değeri okuyup değiştirip geri yazmak gerekirdi ve aynı anda gelen iki oydan biri kaybolabilirdi.
+- **`Order` değil `DisplayOrder`.** `ORDER` SQL'in ayrılmış kelimesi (`ORDER BY`); elle yazılan sorgularda karışıklık çıkarmasın.
+- **Tarihler `DateTimeOffset`.** Değer, UTC'ye göre farkıyla birlikte saklanır; an tek anlamlı tanımlanır.
+- **Uzunluklar.** `Author` 30 ve `Body` 500 sözleşmeden. Diğerleri `db.json`'daki en uzun değerlerin rahatça üstünde seçildi; `Emoji` 32, çünkü ekranda tek görünen bir emoji içeride 10'dan fazla karakter tutabilir.
+
 ## CORS
 
 İzin verilen origin listesi `Cors:AllowedOrigins` ayarında; geliştirmede `appsettings.Development.json` içinde `http://localhost:5173`. Liste tanımlı değilse hiçbir origin'e izin verilmez.
@@ -49,8 +92,8 @@ Taslak. Sözleşmenin okuma uçları hazır ve React uygulaması geliştirmede b
 
 ## Bilinçli borçlar
 
-- Veri bellekte ve salt okunur; veritabanı (EF Core + SQL Server) sırada.
-- Öğe ve kategori `id`'si slug: değişmeyen bir sayı anahtar + ayrı `slug` sütununa geçilecek.
+- Uçlar veriyi bellekten okuyor ve salt okunur; veritabanı modeli tanımlı ama tablolar oluşturulmadı.
+- Öğe ve kategori `id`'si dışarıya hâlâ slug olarak gidiyor; veri modelinde sayı anahtar + tekil slug var, uçlar henüz ona geçmedi.
 - `id` büyük/küçük harf duyarlı; veritabanına geçişte SQL Server'ın karşılaştırma kuralıyla yeniden değerlendirilecek.
 - `/items` ve kategori öğeleri dosya sırasıyla dönüyor; açık sıralama yok.
 - Tarihlerin UTC etiketi `db.json`'dan geliyor (`…Z`). Veritabanından okunan tarihlerde bu etiket kaybolabilir; web'deki zod şeması `Z`'siz tarihi reddeder.
