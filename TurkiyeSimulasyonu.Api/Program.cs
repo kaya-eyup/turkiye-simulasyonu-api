@@ -19,8 +19,10 @@ builder.Services.AddSingleton(seedData);
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' not found.");
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<AppDbContext>(options => options
+    .UseSqlServer(connectionString)
+    // dotnet ef database update'in sonunda EF çağırır; uygulama çalışırken (F5) çağrılmaz
+    .UseSeeding((context, _) => DbSeeder.Seed(context, seedData)));
 
 // CORS: tarayıcıda hangi adreslerdeki sayfaların bu API'nin cevabını okuyabileceği.
 // Liste ortama göre appsettings'ten gelir; liste yoksa kimseye izin verilmez.
