@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TurkiyeSimulasyonu.Api.Models;
-using TurkiyeSimulasyonu.Api.Data;
+using TurkiyeSimulasyonu.Api.Data.Seed;
 
 
 namespace TurkiyeSimulasyonu.Api.Controllers;
@@ -15,7 +14,7 @@ public class ItemsController : ControllerBase
         _data = data;
     }
     [HttpGet("{id}")]
-    public ActionResult<Item> GetById(string id)
+    public ActionResult<SeedItem> GetById(string id)
     {
         var item = _data.Items.FirstOrDefault(i => i.Id == id);
 
@@ -26,10 +25,10 @@ public class ItemsController : ControllerBase
         return Ok(item);
     }
     [HttpGet]
-    public ActionResult<List<Item>> GetAll(string? categoryId)
+    public ActionResult<List<SeedItem>> GetAll(string? categoryId)
     {
         
-        IEnumerable<Item> query = _data.Items;
+        IEnumerable<SeedItem> query = _data.Items;
 
         
         if (!string.IsNullOrWhiteSpace(categoryId))

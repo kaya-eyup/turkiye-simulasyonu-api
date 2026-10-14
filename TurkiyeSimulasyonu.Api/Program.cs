@@ -1,5 +1,6 @@
 using TurkiyeSimulasyonu.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using TurkiyeSimulasyonu.Api.Data.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +10,7 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-var seedPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "db.json");
+var seedPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "Seed", "db.json");
 var seedData = SeedDataReader.Read(seedPath);
 builder.Services.AddSingleton(seedData);
 

@@ -1,6 +1,6 @@
-﻿namespace TurkiyeSimulasyonu.Api.Models;
+﻿namespace TurkiyeSimulasyonu.Api.Data.Seed;
 
-public record Item(
+public record SeedItem(
     string Id,
     string CategoryId,
     string Name,

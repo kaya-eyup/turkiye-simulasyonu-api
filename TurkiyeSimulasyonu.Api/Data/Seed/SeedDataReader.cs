@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace TurkiyeSimulasyonu.Api.Data;
+namespace TurkiyeSimulasyonu.Api.Data.Seed;
 
 public static class SeedDataReader
 {

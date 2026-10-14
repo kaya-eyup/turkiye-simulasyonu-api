@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TurkiyeSimulasyonu.Api.Models;
-using TurkiyeSimulasyonu.Api.Data;
+using TurkiyeSimulasyonu.Api.Data.Seed;
 
 namespace TurkiyeSimulasyonu.Api.Controllers;
 
@@ -16,7 +15,7 @@ public class CommentsController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<List<Comment>> GetByItem(string itemId)
+    public ActionResult<List<SeedComment>> GetByItem(string itemId)
     {
         var result = _data.Comments
             .Where(c => c.ItemId == itemId)
