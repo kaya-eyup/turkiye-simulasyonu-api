@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TurkiyeSimulasyonu.Api.Data.Seed;
+using Microsoft.EntityFrameworkCore;
+using TurkiyeSimulasyonu.Api.Data;
+using TurkiyeSimulasyonu.Api.Dtos;
 
 namespace TurkiyeSimulasyonu.Api.Controllers;
 
@@ -7,21 +9,29 @@ namespace TurkiyeSimulasyonu.Api.Controllers;
 [Route("comments")]
 public class CommentsController : ControllerBase
 {
-    private readonly SeedData _data;
+    private readonly AppDbContext _db;
 
-    public CommentsController(SeedData data)
+    public CommentsController(AppDbContext db)
     {
-        _data = data;
+        _db = db;
     }
 
     [HttpGet]
-    public ActionResult<List<SeedComment>> GetByItem(string itemId)
+    public async Task<ActionResult<List<CommentDto>>> GetByItem(string itemId, CancellationToken cancellationToken)
     {
-        var result = _data.Comments
-            .Where(c => c.ItemId == itemId)
+        var result = await _db.Comments
+            .Where(c => c.Item.Slug == itemId)
             .OrderByDescending(c => c.CreatedAt)
-            .ThenByDescending(c => c.Id, StringComparer.Ordinal)
-            .ToList();
+            .ThenByDescending(c => c.Id)
+            .Select(c => new CommentDto
+            {
+                Id = c.Id.ToString(),
+                ItemId = c.Item.Slug,
+                Author = c.Author,
+                Body = c.Body,
+                CreatedAt = c.CreatedAt,
+            })
+            .ToListAsync(cancellationToken);
 
         return Ok(result);
     }

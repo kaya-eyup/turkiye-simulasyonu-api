@@ -39,7 +39,7 @@ GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=olmayan-kategori
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=
 
 
-### Doğru istek → 200 + 2 yorum; önce c-003 (16:05), sonra c-002 (15:20). Dosyada sıra tersi
+### Doğru istek → 200 + 2 yorum, önce 16:05'teki; id’ler artık sayı metni
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=baklava
 Accept: application/json
 
