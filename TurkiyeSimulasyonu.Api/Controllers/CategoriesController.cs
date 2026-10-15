@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TurkiyeSimulasyonu.Api.Data.Seed;
-
+using Microsoft.EntityFrameworkCore;
+using TurkiyeSimulasyonu.Api.Data;
+using TurkiyeSimulasyonu.Api.Dtos;
 
 namespace TurkiyeSimulasyonu.Api.Controllers;
 
@@ -8,35 +9,51 @@ namespace TurkiyeSimulasyonu.Api.Controllers;
 [Route("categories")]
 public class CategoriesController : ControllerBase
 {
+    private readonly AppDbContext _db;
 
-    private readonly SeedData _data;
-
-    public CategoriesController(SeedData data)
+    public CategoriesController(AppDbContext db)
     {
-        _data = data;
+        _db = db;
     }
+
     [HttpGet]
-    public ActionResult<List<SeedCategory>> GetAll()
+    public async Task<ActionResult<List<CategoryDto>>> GetAll(CancellationToken cancellationToken)
     {
-        var result = _data.Categories
-            .OrderBy(c => c.Order)
-            .ToList();
+        var result = await _db.Categories
+       .OrderBy(c => c.DisplayOrder)
+       .ThenBy(c => c.Id)
+       .Select(c => new CategoryDto
+       {
+           Id = c.Slug,
+           Name = c.Name,
+           Emoji = c.Emoji,
+           Order = c.DisplayOrder
+
+
+       })
+       .ToListAsync(cancellationToken);
 
         return Ok(result);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<SeedCategory> GetById(string id)
+    public async Task<ActionResult<CategoryDto>> GetById(string id, CancellationToken cancellationToken)
     {
-        var category = _data.Categories.FirstOrDefault(c => c.Id == id);
-
-        if (category is null)
+        var result = await _db.Categories
+            .Where(c => c.Slug == id)
+            .Select(c => new CategoryDto
+            {
+                Id = c.Slug,
+                Name = c.Name,
+                Emoji = c.Emoji,
+                Order = c.DisplayOrder
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (result == null)
         {
             return NotFound();
         }
 
-        
-        return Ok(category);
+        return Ok(result);
     }
-
 }
