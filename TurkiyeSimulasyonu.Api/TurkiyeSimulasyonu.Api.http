@@ -21,7 +21,7 @@ Accept: application/json
 ### Bilerek bozuk: olmayan id → 404
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/olmayan-oge
  
-### Bilerek bozuk: var olan id, büyük harfle →  404 (slug küçük harf sözleşmesi)
+### Bilerek bozuk: var olan id, büyük harfle → 200 + "id": "kebap" (collation büyük/küçük harfe duyarsız)
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/KEBAP
 
 ### Doğru istek → 200 + sadece o kategorinin öğeleri

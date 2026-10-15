@@ -1,22 +1,36 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TurkiyeSimulasyonu.Api.Data.Seed;
+using Microsoft.EntityFrameworkCore;
+using TurkiyeSimulasyonu.Api.Data;
+using TurkiyeSimulasyonu.Api.Dtos;
+using TurkiyeSimulasyonu.Api.Entities;
 
 
 namespace TurkiyeSimulasyonu.Api.Controllers;
 
-[ApiController]                                     
+[ApiController]
 [Route("items")]
 public class ItemsController : ControllerBase
 {
-    private readonly SeedData _data;
-    public ItemsController(SeedData data)
+    private readonly AppDbContext _db;
+    public ItemsController(AppDbContext data)
     {
-        _data = data;
+        _db = data;
     }
     [HttpGet("{id}")]
-    public ActionResult<SeedItem> GetById(string id)
+    public async Task<ActionResult<ItemDto>> GetById(string id, CancellationToken cancellationToken)
     {
-        var item = _data.Items.FirstOrDefault(i => i.Id == id);
+        var item = await _db.Items
+            .Where(i => i.Slug == id)
+            .Select(i => new ItemDto
+            {
+                Id = i.Slug,
+                CategoryId = i.Category.Slug,
+                Name = i.Name,
+                Emoji = i.Emoji,
+                Summary = i.Summary,
+                Distribution = new[] { i.Score1Count, i.Score2Count, i.Score3Count, i.Score4Count, i.Score5Count },
+                CreatedAt = i.CreatedAt,
+            }).FirstOrDefaultAsync(cancellationToken);
 
         if (item is null)
         {
@@ -25,17 +39,29 @@ public class ItemsController : ControllerBase
         return Ok(item);
     }
     [HttpGet]
-    public ActionResult<List<SeedItem>> GetAll(string? categoryId)
+    public async Task<ActionResult<List<ItemDto>>> GetAll(string? categoryId, CancellationToken cancellationToken)
     {
-        
-        IEnumerable<SeedItem> query = _data.Items;
+        IQueryable<Item> query = _db.Items;
 
-        
         if (!string.IsNullOrWhiteSpace(categoryId))
         {
-            query = query.Where(i => i.CategoryId == categoryId);
+            query = query.Where(i => i.Category.Slug == categoryId);
         }
 
-        return Ok(query.ToList());
+        var result = await query
+            .OrderBy(i => i.Id)
+            .Select(i => new ItemDto
+            {
+                Id = i.Slug,
+                CategoryId = i.Category.Slug,
+                Name = i.Name,
+                Emoji = i.Emoji,
+                Summary = i.Summary,
+                Distribution = new[] { i.Score1Count, i.Score2Count, i.Score3Count, i.Score4Count, i.Score5Count },
+                CreatedAt = i.CreatedAt,
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(result);
     }
 }
