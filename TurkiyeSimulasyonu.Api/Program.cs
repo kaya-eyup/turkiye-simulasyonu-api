@@ -1,12 +1,17 @@
-using TurkiyeSimulasyonu.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Data.Seed;
+using TurkiyeSimulasyonu.Api.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeOffsetConverter());
+    });
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
