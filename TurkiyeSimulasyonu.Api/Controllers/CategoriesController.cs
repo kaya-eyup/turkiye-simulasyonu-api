@@ -49,7 +49,7 @@ public class CategoriesController : ControllerBase
                 Order = c.DisplayOrder
             })
             .FirstOrDefaultAsync(cancellationToken);
-        if (result == null)
+        if (result is null)
         {
             return NotFound();
         }
