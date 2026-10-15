@@ -20,17 +20,15 @@ public class CategoriesController : ControllerBase
     public async Task<ActionResult<List<CategoryDto>>> GetAll(CancellationToken cancellationToken)
     {
         var result = await _db.Categories
-       .OrderBy(c => c.DisplayOrder)
-       .ThenBy(c => c.Id)
-       .Select(c => new CategoryDto
-       {
-           Id = c.Slug,
-           Name = c.Name,
-           Emoji = c.Emoji,
-           Order = c.DisplayOrder
-
-
-       })
+            .OrderBy(c => c.DisplayOrder)
+            .ThenBy(c => c.Id)
+            .Select(c => new CategoryDto
+            {
+                Id = c.Slug,
+                Name = c.Name,
+                Emoji = c.Emoji,
+                Order = c.DisplayOrder
+            })
        .ToListAsync(cancellationToken);
 
         return Ok(result);
