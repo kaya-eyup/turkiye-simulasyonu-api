@@ -15,7 +15,6 @@ public class ItemsController : ControllerBase
         _itemService = itemService;
     }
 
-
     [HttpGet]
     public async Task<ActionResult<List<ItemDto>>> GetAll(string? categoryId, CancellationToken cancellationToken)
     {

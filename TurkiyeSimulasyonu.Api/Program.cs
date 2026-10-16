@@ -18,7 +18,6 @@ builder.Services.AddOpenApi();
 
 var seedPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "Seed", "db.json");
 
-
 // Connection string eksikse uygulamanın açılışta açılmaması (Fail Fast)
 // ve adresin her istekte değil yalnızca açılışta bir kez okunması için dışarıda tanımlandı.
 var connectionString = builder.Configuration.GetConnectionString("Default")
@@ -32,6 +31,7 @@ builder.Services.AddDbContext<AppDbContext>(options => options
 builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+
 // CORS: tarayıcıda hangi adreslerdeki sayfaların bu API'nin cevabını okuyabileceği.
 // Liste ortama göre appsettings'ten gelir; liste yoksa kimseye izin verilmez.
 const string FrontendCorsPolicy = "Frontend";
