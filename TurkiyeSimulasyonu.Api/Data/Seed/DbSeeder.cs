@@ -7,7 +7,7 @@ namespace TurkiyeSimulasyonu.Api.Data.Seed;
 // EF, dotnet ef database update'in sonunda çağırır (Program.cs → UseSeeding); uygulama çalışırken çağrılmaz.
 public static class DbSeeder
 {
-    public static void Seed(DbContext context, SeedData data)
+    public static void Seed(DbContext context, string seedPath)
     {
         // Her database update'te çalışır; veritabanı doluysa dokunma, ikinci çalıştırma çift kayıt üretmesin.
         // Hepsi tek SaveChanges ile yazıldığı için kategori varsa öğeler ve yorumlar da var demektir.
@@ -15,7 +15,7 @@ public static class DbSeeder
         {
             return;
         }
-
+        var data = SeedDataReader.Read(seedPath);
         // Anahtar db.json'daki slug. Öğeler kategorilerini, yorumlar öğelerini bu sözlüklerden bulur.
         var categoriesBySlug = data.Categories.ToDictionary(
             c => c.Id,
