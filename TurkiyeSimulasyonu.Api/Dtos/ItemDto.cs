@@ -3,10 +3,10 @@
 public record ItemDto
 {
     public required string Id { get; init; }
-    public required string CategoryId { get; set; }
-    public required string Name { get; set; }
-    public required string Emoji { get; set; }
-    public required string Summary { get; set; }
-    public required IReadOnlyList<int> Distribution { get; set; }
-    public required DateTimeOffset CreatedAt { get; set; }
+    public required string CategoryId { get; init; }
+    public required string Name { get; init; }
+    public required string Emoji { get; init; }
+    public required string Summary { get; init; }
+    public required IReadOnlyList<int> Distribution { get; init; }
+    public required DateTimeOffset CreatedAt { get; init; }
 }
