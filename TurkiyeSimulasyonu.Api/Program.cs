@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Data.Seed;
 using TurkiyeSimulasyonu.Api.Json;
+using TurkiyeSimulasyonu.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +28,7 @@ builder.Services.AddDbContext<AppDbContext>(options => options
     .UseSqlServer(connectionString)
     // dotnet ef database update'in sonunda EF çağırır; uygulama çalışırken (F5) çağrılmaz
     .UseSeeding((context, _) => DbSeeder.Seed(context, seedPath)));
-
+builder.Services.AddScoped<IItemService, ItemService>();
 // CORS: tarayıcıda hangi adreslerdeki sayfaların bu API'nin cevabını okuyabileceği.
 // Liste ortama göre appsettings'ten gelir; liste yoksa kimseye izin verilmez.
 const string FrontendCorsPolicy = "Frontend";
