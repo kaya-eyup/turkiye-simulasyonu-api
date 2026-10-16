@@ -6,25 +6,39 @@ Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu: API o tablodak
 
 ## Durum
 
-Taslak. Sözleşmenin okuma uçları hazır ve React uygulaması geliştirmede bu API'den okuyor. Veri henüz veritabanında değil: `Data/db.json` uygulama açılırken bir kez belleğe okunur. Veri modeli ve `AppDbContext` tanımlı, ama veritabanı henüz oluşturulmadı (migration yok). Yazma ucu yok.
+Veri LocalDB’de, EF Core ile okunuyor. Uçlar DTO döndürüyor; dışarı giden JSON’un şekli değişmedi. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor. Yazma ucu henüz yok (Gün 50).
 
 ## Çalıştırma
 
-1. Visual Studio'da `https` profiliyle F5 (ya da `dotnet run --launch-profile https`).
-2. API `https://localhost:7129` adresinde açılır. `http://localhost:5267`'ye gelen istekler https'e yönlendirilir.
-3. İstekler `TurkiyeSimulasyonu.Api/TurkiyeSimulasyonu.Api.http` dosyasında: her uç için bir doğru istek ve bilerek bozulmuş istekler, başlıklarında beklenen sonuçla.
+### Önkoşullar
+- LocalDB (Visual Studio ile birlikte geliyor)
+- `dotnet-ef` aracı (10.x): *`dotnet tool install --global dotnet-ef --version10.`*
+
+### İlk Kurulum ve Çalıştırma
+1. Proje klasöründe (TurkiyeSimulasyonu.Api/) `dotnet ef database update` çalıştır. Bu komut tabloları kurar ve seed’i çalıştırır. (Veritabanını sıfırlamak için: `dotnet ef database drop --force` + `dotnet ef database update`.)
+2. Visual Studio'da `https` profiliyle F5 (ya da `dotnet run --launch-profile https`).
+3. API `https://localhost:7129` adresinde açılır. `http://localhost:5267`'ye gelen istekler https'e yönlendirilir.
+4. İstekler `TurkiyeSimulasyonu.Api/TurkiyeSimulasyonu.Api.http` dosyasında: her uç için bir doğru istek ve bilerek bozulmuş istekler, başlıklarında beklenen sonuçla.
 
 `dotnet run` profil belirtilmeden çalıştırılırsa `launchSettings.json`'daki ilk profil (`http`) seçilir ve 7129 açılmaz.
+
+## Mimari
+
+Controller → Service (`IXxxService` / `XxxService`) → AppDbContext → SQL Server
+
+- **Controller HTTP’yi karşılıyor:** Parametreyi alıyor, servisten gelen veriyi ya da null’ı 200/404'e çeviriyor.
+- **Servis sorguyu ve DTO’yu kuruyor:** HTTP bilmiyor.
+- **Scoped Servisler:** Servisler scoped, çünkü `AppDbContext` scoped. Ayrı bir repository katmanı yok: `DbSet` zaten repository’nin, `DbContext` de unit of work’ün işini yapıyor.
 
 ## Uçlar
 
 | Uç | Başarılı | Diğer durumlar |
 | --- | --- | --- |
-| `GET /categories` | 200, `order`'a göre sıralı | |
+| `GET /categories` | 200, `order`'a göre sıralı (eşitse `Id`) | |
 | `GET /categories/{id}` | 200 | olmayan id → 404 (ProblemDetails) |
-| `GET /items` | 200, bütün öğeler (arama sayfası için) | |
-| `GET /items?categoryId=` | 200, kategorinin öğeleri | olmayan kategori → 200 + `[]` · boş değer → bütün öğeler |
-| `GET /items/{id}` | 200 | olmayan id → 404 · büyük harfli id (`KEBAP`) → 404 |
+| `GET /items` | 200, bütün öğeler (`Id` sırasıyla, arama sayfası için) | |
+| `GET /items?categoryId=` | 200, kategorinin öğeleri (`Id` sırasıyla) | olmayan kategori → 200 + `[]` · boş değer → bütün öğeler |
+| `GET /items/{id}` | 200 | olmayan id → 404 · büyük harfli id (`KEBAP`) → 200, cevapta kanonik `"id": "kebap"` |
 | `GET /comments?itemId=` | 200, yeniden eskiye | `itemId` yok ya da boş → 400 (`errors.itemId`) · olmayan öğe → 200 + `[]` |
 
 - Tanınmayan query parametreleri yok sayılır (ör. json-server'dan kalma `_sort`).
@@ -32,7 +46,7 @@ Taslak. Sözleşmenin okuma uçları hazır ve React uygulaması geliştirmede b
 
 ## Veri modeli
 
-Model `Data/AppDbContext.cs`'te tanımlı (entity'ler `Entities/` altında); tablolar henüz oluşturulmadı.
+Tablo yapısı `InitialCreate` migration’ında tanımlı. Seed `UseSeeding` + `DbSeeder` ile çalışıyor; sadece `database update` sırasında ve veritabanı boşsa. `db.json` uygulama çalışırken hiç okunmuyor.
 
 ### Tablolar
 
@@ -72,6 +86,8 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **`Order` değil `DisplayOrder`.** `ORDER` SQL'in ayrılmış kelimesi (`ORDER BY`); elle yazılan sorgularda karışıklık çıkarmasın.
 - **Tarihler `DateTimeOffset`.** Değer, UTC'ye göre farkıyla birlikte saklanır; an tek anlamlı tanımlanır.
 - **Uzunluklar.** `Author` 30 ve `Body` 500 sözleşmeden. Diğerleri `db.json`'daki en uzun değerlerin rahatça üstünde seçildi; `Emoji` 32, çünkü ekranda tek görünen bir emoji içeride 10'dan fazla karakter tutabilir.
+- **DTO:** `id = slug`, iç numara dışarı çıkmıyor. Başka bir kaynağa işaret eden alan, o kaynağın slug’ını taşıyor (`categoryId`, `itemId`).
+
 
 ## CORS
 
@@ -83,21 +99,24 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 
 ## Kararlar
 
-- **Sıralama sunucuda.** Liste uçları sıralı döner; istemciye güvenilmez. Her sıralamanın son anahtarı benzersiz bir alan (tie-breaker): yorumlar `CreatedAt` azalan, eşitse `Id` azalan (ordinal).
+- **Sıralama sunucuda.** Select’ten önce ve entity’nin sütunlarıyla. Liste uçları sıralı döner; istemciye güvenilmez. Her sıralamanın son anahtarı benzersiz bir alan (tie-breaker): yorumlar CreatedAt azalan, eşitse Id azalan.
 - **Her kaynak kendi controller'ında** (`categories`, `items`, `comments`).
 - **Bulunamayan kayıt ile eşleşmeyen süzgeç farklı.** `/items/{id}` için olmayan id 404; `?categoryId=` ile eşleşen kayıt olmaması 200 + `[]`.
 - **`itemId` zorunlu.** Süzgeçsiz bir yorum listesi her yeni yorumla sınırsız büyür; hiçbir sayfa da onu istemiyor.
 - **Uyarılar hata gibi ele alınır** (`TreatWarningsAsErrors`) ve null güvenliği açık (`Nullable`).
-- **Bozuk seed uygulamayı açtırmaz.** JSON okuyucu null olmaması gereken alanda null'u ve eksik zorunlu alanı reddeder; `distribution` tam 5 negatif olmayan sayı olmalı.
+- **Bozuk seed dosyası database update’i durdurur.** JSON okuyucu null olmaması gereken alanda null’u ve eksik zorunlu alanı reddeder; distribution tam 5 negatif olmayan sayı olmalı. Dosya yazmadan önce okunduğu için yarım veri yazılmaz.
+- **Projection:** Her uç tek sorgu atıyor ve sadece DTO’nun sütunlarını çekiyor.
+- **Async + CancellationToken:** İstemci vazgeçince sorgu kesiliyor. `TaskCanceledException` yakalanmıyor.
+- **Tarihler dışarıda UTC + Z** Tek bir converter bütün tarihleri UTC + Z ile yazıyor (zod’un `z.iso.datetime()` şeması bunu istiyor).
+- **Collation (KEBAP kararı):** LocalDB’nin karşılaştırma kuralı (…_CI_AS) büyük/küçük harfi ayırmıyor. Tekil index de aynı kuralla çalıştığı için KEBAP ile kebap aynı kaydı gösteriyor. Büyük harfli istek 200 alıyor ve cevapta kanonik slug dönüyor.
 
 ## Bilinçli borçlar
 
-- Uçlar veriyi bellekten okuyor ve salt okunur; veritabanı modeli tanımlı ama tablolar oluşturulmadı.
-- Öğe ve kategori `id`'si dışarıya hâlâ slug olarak gidiyor; veri modelinde sayı anahtar + tekil slug var, uçlar henüz ona geçmedi.
-- `id` büyük/küçük harf duyarlı; veritabanına geçişte SQL Server'ın karşılaştırma kuralıyla yeniden değerlendirilecek.
-- `/items` ve kategori öğeleri dosya sırasıyla dönüyor; açık sıralama yok.
-- Tarihlerin UTC etiketi `db.json`'dan geliyor (`…Z`). Veritabanından okunan tarihlerde bu etiket kaybolabilir; web'deki zod şeması `Z`'siz tarihi reddeder.
-- `POST /comments` yok (405).
-- 405 cevabının gövdesi boş; hata cevapları henüz tek bir şekilde değil.
-- Sorgu mantığı controller'larda; servis katmanı yok.
+- `POST /comments` yok (Gün 50).
+- 405 cevabının gövdesi boş, hata cevapları tek şekilde değil (Gün 57).
 - Test yok.
+- Kullanıcı hataları 500'e dönüşüyor (Gün 55, 57).
+- `/items` ve yorum listesi sayfasız (Gün 54).
+- Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
+- Yerel tool manifest yok.
+- Canlı ortam için CORS ayarı yok (Gün 53).
