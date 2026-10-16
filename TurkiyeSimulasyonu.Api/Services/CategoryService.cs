@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Dtos;
+using TurkiyeSimulasyonu.Api.Entities;
 
 namespace TurkiyeSimulasyonu.Api.Services;
 
@@ -8,6 +10,14 @@ public sealed class CategoryService : ICategoryService
 {
     private readonly AppDbContext _db;
 
+    // EF Core'un SQL'e çevirebilmesi için Expression kullanıyoruz
+    private static readonly Expression<Func<Category, CategoryDto>> s_toDto = c => new CategoryDto
+    {
+        Id = c.Slug,
+        Name = c.Name,
+        Emoji = c.Emoji,
+        Order = c.DisplayOrder,
+    };
     public CategoryService(AppDbContext db)
     {
         _db = db;
@@ -18,13 +28,7 @@ public sealed class CategoryService : ICategoryService
         var result = await _db.Categories
             .OrderBy(c => c.DisplayOrder)
             .ThenBy(c => c.Id)
-            .Select(c => new CategoryDto
-            {
-                Id = c.Slug,
-                Name = c.Name,
-                Emoji = c.Emoji,
-                Order = c.DisplayOrder,
-            })
+            .Select(s_toDto)
             .ToListAsync(cancellationToken);
 
         return result;
@@ -34,13 +38,7 @@ public sealed class CategoryService : ICategoryService
     {
         var result = await _db.Categories
             .Where(c => c.Slug == id)
-            .Select(c => new CategoryDto
-            {
-                Id = c.Slug,
-                Name = c.Name,
-                Emoji = c.Emoji,
-                Order = c.DisplayOrder,
-            })
+            .Select(s_toDto)
             .FirstOrDefaultAsync(cancellationToken);
 
         return result;

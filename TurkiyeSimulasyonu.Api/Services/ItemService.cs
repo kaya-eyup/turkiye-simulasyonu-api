@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Dtos;
 using TurkiyeSimulasyonu.Api.Entities;
@@ -10,6 +11,17 @@ public sealed class ItemService : IItemService
 {
     private readonly AppDbContext _db;
 
+    // EF bu tarifi okuyup SQL'e çevirir; metot olsaydı içini göremezdi
+    private static readonly Expression<Func<Item, ItemDto>> s_toDto = i => new ItemDto
+    {
+        Id = i.Slug,
+        CategoryId = i.Category.Slug,
+        Name = i.Name,
+        Emoji = i.Emoji,
+        Summary = i.Summary,
+        Distribution = new[] { i.Score1Count, i.Score2Count, i.Score3Count, i.Score4Count, i.Score5Count },
+        CreatedAt = i.CreatedAt,
+    };
     public ItemService(AppDbContext db)
     {
         _db = db;
@@ -26,16 +38,7 @@ public sealed class ItemService : IItemService
 
         var result = await query
             .OrderBy(i => i.Id)
-            .Select(i => new ItemDto
-            {
-                Id = i.Slug,
-                CategoryId = i.Category.Slug,
-                Name = i.Name,
-                Emoji = i.Emoji,
-                Summary = i.Summary,
-                Distribution = new[] { i.Score1Count, i.Score2Count, i.Score3Count, i.Score4Count, i.Score5Count },
-                CreatedAt = i.CreatedAt,
-            })
+            .Select(s_toDto)
             .ToListAsync(cancellationToken);
 
         return result;
@@ -45,16 +48,7 @@ public sealed class ItemService : IItemService
     {
         var item = await _db.Items
             .Where(i => i.Slug == id)
-            .Select(i => new ItemDto
-            {
-                Id = i.Slug,
-                CategoryId = i.Category.Slug,
-                Name = i.Name,
-                Emoji = i.Emoji,
-                Summary = i.Summary,
-                Distribution = new[] { i.Score1Count, i.Score2Count, i.Score3Count, i.Score4Count, i.Score5Count },
-                CreatedAt = i.CreatedAt,
-            })
+            .Select(s_toDto)
             .FirstOrDefaultAsync(cancellationToken);
 
         return item;
