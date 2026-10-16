@@ -28,7 +28,9 @@ builder.Services.AddDbContext<AppDbContext>(options => options
     .UseSqlServer(connectionString)
     // dotnet ef database update'in sonunda EF çağırır; uygulama çalışırken (F5) çağrılmaz
     .UseSeeding((context, _) => DbSeeder.Seed(context, seedPath)));
+
 builder.Services.AddScoped<IItemService, ItemService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 // CORS: tarayıcıda hangi adreslerdeki sayfaların bu API'nin cevabını okuyabileceği.
 // Liste ortama göre appsettings'ten gelir; liste yoksa kimseye izin verilmez.
 const string FrontendCorsPolicy = "Frontend";

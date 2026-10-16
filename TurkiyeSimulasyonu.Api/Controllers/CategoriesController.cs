@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Dtos;
+using TurkiyeSimulasyonu.Api.Services;
 
 namespace TurkiyeSimulasyonu.Api.Controllers;
 
@@ -9,44 +8,25 @@ namespace TurkiyeSimulasyonu.Api.Controllers;
 [Route("categories")]
 public class CategoriesController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly ICategoryService _categoryService;
 
-    public CategoriesController(AppDbContext db)
+    public CategoriesController(ICategoryService categoryService)
     {
-        _db = db;
+        _categoryService = categoryService;
     }
 
     [HttpGet]
     public async Task<ActionResult<List<CategoryDto>>> GetAll(CancellationToken cancellationToken)
     {
-        var result = await _db.Categories
-            .OrderBy(c => c.DisplayOrder)
-            .ThenBy(c => c.Id)
-            .Select(c => new CategoryDto
-            {
-                Id = c.Slug,
-                Name = c.Name,
-                Emoji = c.Emoji,
-                Order = c.DisplayOrder
-            })
-       .ToListAsync(cancellationToken);
-
+        var result = await _categoryService.GetAllAsync(cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<CategoryDto>> GetById(string id, CancellationToken cancellationToken)
     {
-        var result = await _db.Categories
-            .Where(c => c.Slug == id)
-            .Select(c => new CategoryDto
-            {
-                Id = c.Slug,
-                Name = c.Name,
-                Emoji = c.Emoji,
-                Order = c.DisplayOrder
-            })
-            .FirstOrDefaultAsync(cancellationToken);
+        var result = await _categoryService.GetByIdAsync(id, cancellationToken);
+
         if (result is null)
         {
             return NotFound();
