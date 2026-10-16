@@ -20,8 +20,8 @@ Accept: application/json
 
 ### Bilerek bozuk: olmayan id → 404
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/olmayan-oge
- 
-### Bilerek bozuk: var olan id, büyük harfle → 200 + "id": "kebap" (collation büyük/küçük harfe duyarsız)
+
+### Gözlem: var olan id, büyük harfle → 200 + "id": "kebap" (collation büyük/küçük harfe duyarsız)
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/KEBAP
 
 ### Doğru istek → 200 + sadece o kategorinin öğeleri
@@ -50,7 +50,7 @@ Accept: application/json
 ### Bilerek bozuk: itemId yok → 400, errors.itemId
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
 
-### Bilerek bozuk: itemId boş →  400, errors.itemId (boş değer null'a çevrilir, ?'siz parametre zorunlu)
+### Bilerek bozuk: itemId boş → 400, errors.itemId (boş değer null'a çevrilir, ?'siz parametre zorunlu)
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=
 
 ### Bilerek bozuk: olmayan öğe → 200 + []
