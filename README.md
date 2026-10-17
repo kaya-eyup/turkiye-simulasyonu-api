@@ -6,7 +6,7 @@ Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu: API o tablodak
 
 ## Durum
 
-Veri LocalDB’de, EF Core ile okunuyor. Uçlar DTO döndürüyor; dışarı giden JSON’un şekli değişmedi. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor. Yazma ucu henüz yok (Gün 50).
+Veri LocalDB’de, EF Core ile okunuyor. Uçlar DTO döndürüyor; dışarı giden JSON’un şekli değişmedi. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor.
 
 ## Çalıştırma
 
@@ -40,6 +40,7 @@ Controller → Service (`IXxxService` / `XxxService`) → AppDbContext → SQL S
 | `GET /items?categoryId=` | 200, kategorinin öğeleri (`Id` sırasıyla) | olmayan kategori → 200 + `[]` · boş değer → bütün öğeler |
 | `GET /items/{id}` | 200 | olmayan id → 404 · büyük harfli id (`KEBAP`) → 200, cevapta kanonik `"id": "kebap"` |
 | `GET /comments?itemId=` | 200, yeniden eskiye | `itemId` yok ya da boş → 400 (`errors.itemId`) · olmayan öğe → 200 + `[]` |
+| `POST /comments` | 201 + oluşturulan kayıt | olmayan öğe → 400 (`errors.itemId`) · eksik alan ya da bozuk JSON → 400 · `Content-Type` yok → 415 · uzun metin → 500 (borç) |
 
 - Tanınmayan query parametreleri yok sayılır (ör. json-server'dan kalma `_sort`).
 - Desteklenmeyen metot → 405.
@@ -109,10 +110,14 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Async + CancellationToken:** İstemci vazgeçince sorgu kesiliyor. `TaskCanceledException` yakalanmıyor.
 - **Tarihler dışarıda UTC + Z** Tek bir converter bütün tarihleri UTC + Z ile yazıyor (zod’un `z.iso.datetime()` şeması bunu istiyor).
 - **Collation (KEBAP kararı):** LocalDB’nin karşılaştırma kuralı (…_CI_AS) büyük/küçük harfi ayırmıyor. Tekil index de aynı kuralla çalıştığı için KEBAP ile kebap aynı kaydı gösteriyor. Büyük harfli istek 200 alıyor ve cevapta kanonik slug dönüyor.
+- Giriş paketi sadece `itemId`, `author`, `body` taşıyor. `id` ve `createdAt` sunucuda üretiliyor; gövdede gelirlerse yok sayılıyor (toplu atama).
+- `Location` başlığı yok, çünkü tek bir yorumu gösteren bir uç yok.
+- Olmayan öğe 404 değil 400, çünkü sorun adreste değil gövdede.
+- Cevaptaki `itemId` kanonik slug.
 
 ## Bilinçli borçlar
 
-- `POST /comments` yok (Gün 50).
+- Uzunluk doğrulaması yok; 30/500 sınırını aşan metin 500 döner. Boş author “anonim”e çevrilmiyor (Gün 55).
 - 405 cevabının gövdesi boş, hata cevapları tek şekilde değil (Gün 57).
 - Test yok.
 - Kullanıcı hataları 500'e dönüşüyor (Gün 55, 57).
