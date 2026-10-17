@@ -65,6 +65,7 @@ GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
 Origin: https://baska-site.example
 
 ### Doğru istek → 201 + oluşturulan kayıt
+### Gözlem: gövdedeki id ve createdAt yok sayılır → 201, değerler sunucunun
 POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
 Content-Type: application/json
 
