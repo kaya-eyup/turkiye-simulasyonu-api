@@ -64,8 +64,8 @@ Origin: http://localhost:5173
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
 Origin: https://baska-site.example
 
-###  Başarılı Yorum Ekleme (201 Created)
-POST https://localhost:5173/comments
+### Doğru istek → 201 + oluşturulan kayıt
+POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
 Content-Type: application/json
 
 {
@@ -74,8 +74,8 @@ Content-Type: application/json
   "body": "Harika bir lezzet, kesinlikle tavsiye ederim."
 }
 
-###  Olmayan Öğe ile Hata Testi (400 Bad Request)
-POST https://localhost:5173/comments
+### Bilerek bozuk: olmayan öğe → 400, errors.itemId
+POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
 Content-Type: application/json
 
 {

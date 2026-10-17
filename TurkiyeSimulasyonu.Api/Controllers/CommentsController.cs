@@ -31,7 +31,7 @@ public class CommentsController : ControllerBase
 
         if (comment is null)
         {
-            ModelState.AddModelError("itemId", "Belirtilen slug değerine sahip öğe bulunamadı.");
+            ModelState.AddModelError("itemId", "Item not found.");
             return ValidationProblem(ModelState);
         }
 

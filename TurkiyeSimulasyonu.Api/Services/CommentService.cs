@@ -16,10 +16,11 @@ public sealed class CommentService : ICommentService
 
     public async Task<CommentDto?> CreateAsync(CreateCommentRequest request, CancellationToken cancellationToken)
     {
+        // 1. Öğeyi bul
         var item = await _db.Items
-        .Where(i => i.Slug == request.ItemId)
-        .Select(i => new { i.Id, i.Slug })
-        .FirstOrDefaultAsync(cancellationToken);
+            .Where(i => i.Slug == request.ItemId)
+            .Select(i => new { i.Id, i.Slug })
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (item is null)
         {
