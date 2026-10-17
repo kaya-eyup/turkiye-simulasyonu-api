@@ -75,6 +75,18 @@ Content-Type: application/json
   "body": "Harika bir lezzet, kesinlikle tavsiye ederim."
 }
 
+### Gözlem: gövdedeki id ve createdAt yok sayılır → 201, değerler sunucunun
+POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+Content-Type: application/json
+
+{
+  "id": "999",
+  "itemId": "baklava",
+  "author": "Ahmet",
+  "body": "Harika bir lezzet, kesinlikle tavsiye ederim.",
+  "createdAt": "2099-01-01T00:00:00Z"
+}
+
 ### Bilerek bozuk: olmayan öğe → 400, errors.itemId
 POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
 Content-Type: application/json
