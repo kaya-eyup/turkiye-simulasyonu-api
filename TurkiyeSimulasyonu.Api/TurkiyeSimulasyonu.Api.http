@@ -96,3 +96,41 @@ Content-Type: application/json
   "author": "Mehmet",
   "body": "Bu yorum hata vermeli."
 }
+
+### Gözlem: büyük harfli itemId → 201, cevapta kanonik "itemId": "baklava"
+POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+Content-Type: application/json
+
+{
+  "itemId": "BAKLAVA",
+  "author": "Ahmet",
+  "body": "Harika bir lezzet, kesinlikle tavsiye ederim."
+}
+
+### Bilerek bozuk: body alanı yok → 400
+POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+Content-Type: application/json
+
+{
+  "itemId": "baklava",
+  "author": "Ahmet"
+}
+
+### Bilerek bozuk: Content-Type yok → 415
+POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+
+{
+  "itemId": "baklava",
+  "author": "Ahmet",
+  "body": "Harika bir lezzet, kesinlikle tavsiye ederim."
+}
+
+### Bilerek bozuk (borç): 31 karakterlik author → 500 (Gün 55'te 400)
+POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+Content-Type: application/json
+
+{
+  "itemId": "baklava",
+  "author": "abcdefghijabcdefghijabcdefghij1",
+  "body": "Harika bir lezzet, kesinlikle tavsiye ederim."
+}
