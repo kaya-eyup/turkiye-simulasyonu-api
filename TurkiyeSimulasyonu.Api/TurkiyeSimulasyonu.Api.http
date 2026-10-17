@@ -64,3 +64,22 @@ Origin: http://localhost:5173
 GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
 Origin: https://baska-site.example
 
+###  Başarılı Yorum Ekleme (201 Created)
+POST https://localhost:5173/comments
+Content-Type: application/json
+
+{
+  "itemId": "baklava",
+  "author": "Ahmet",
+  "body": "Harika bir lezzet, kesinlikle tavsiye ederim."
+}
+
+###  Olmayan Öğe ile Hata Testi (400 Bad Request)
+POST https://localhost:5173/comments
+Content-Type: application/json
+
+{
+  "itemId": "olmayan-oge",
+  "author": "Mehmet",
+  "body": "Bu yorum hata vermeli."
+}
