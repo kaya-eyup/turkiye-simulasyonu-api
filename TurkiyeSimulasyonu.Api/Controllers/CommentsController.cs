@@ -24,8 +24,8 @@ public class CommentsController : ControllerBase
 
     [HttpPost]
     public async Task<ActionResult<CommentDto>> Create(
-    CreateCommentRequest request,
-    CancellationToken cancellationToken)
+        CreateCommentRequest request,
+        CancellationToken cancellationToken)
     {
         var comment = await _commentService.CreateAsync(request, cancellationToken);
 
