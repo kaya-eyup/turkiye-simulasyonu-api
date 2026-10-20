@@ -10,6 +10,8 @@ namespace TurkiyeSimulasyonu.Api.Services;
 public sealed class ItemService : IItemService
 {
     private readonly AppDbContext _db;
+    private const int FeaturedCount = 4;
+    private static readonly TimeSpan FeaturedWindow = TimeSpan.FromDays(7);
 
     // EF bu tarifi okuyup SQL'e çevirir; metot olsaydı içini göremezdi
     private static readonly Expression<Func<Item, ItemDto>> s_toDto = i => new ItemDto
@@ -52,5 +54,41 @@ public sealed class ItemService : IItemService
             .FirstOrDefaultAsync(cancellationToken);
 
         return item;
+    }
+
+    public async Task<List<ItemDto>> GetFeaturedAsync(CancellationToken cancellationToken)
+    {
+        var since = DateTimeOffset.UtcNow - FeaturedWindow;
+
+        var topSlugs = await _db.Comments
+            .Where(c => c.CreatedAt >= since)
+            .GroupBy(c => c.Item.Slug)
+            .Select(g => new
+            {
+                Slug = g.Key,
+                CommentCount = g.Count()
+            })
+            .OrderByDescending(x => x.CommentCount)
+            .ThenBy(x => x.Slug)
+            .Take(FeaturedCount)
+            .Select(x => x.Slug)
+            .ToListAsync(cancellationToken);
+
+        if (topSlugs.Count == 0)
+        {
+            return [];
+        }
+
+        var items = await _db.Items
+            .Where(i => topSlugs.Contains(i.Slug))
+            .Select(s_toDto)
+            .ToListAsync(cancellationToken);
+
+        var itemDict = items.ToDictionary(i => i.Id);
+
+        return topSlugs
+            .Where(slug => itemDict.ContainsKey(slug))
+            .Select(slug => itemDict[slug])
+            .ToList();
     }
 }

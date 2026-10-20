@@ -133,3 +133,11 @@ Content-Type: application/json
   "author": "abcdefghijabcdefghijabcdefghij1",
   "body": "Harika bir lezzet, kesinlikle tavsiye ederim."
 }
+
+### Doğru istek → 200 + en fazla 4 öğe; son 7 günün yorum sayısına göre çoktan aza, eşitse slug
+GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/featured
+Accept: application/json
+
+
+
+

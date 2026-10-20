@@ -22,6 +22,13 @@ public class ItemsController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("featured")]
+    public async Task<ActionResult<List<ItemDto>>> GetFeatured(CancellationToken cancellationToken)
+    {
+        var featuredItems = await _itemService.GetFeaturedAsync(cancellationToken);
+        return Ok(featuredItems);
+    }
+
     [HttpGet("{id}")]
     public async Task<ActionResult<ItemDto>> GetById(string id, CancellationToken cancellationToken)
     {
