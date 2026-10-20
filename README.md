@@ -6,7 +6,7 @@ Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu: API o tablodak
 
 ## Durum
 
-Veri LocalDB’de, EF Core ile okunuyor ve yazılıyor. Reactteki yorum formu `POST /comments`e yazıyor. Uçlar DTO döndürüyor; dışarı giden JSON’un şekli değişmedi. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor.
+Veri LocalDB’de, EF Core ile okunuyor ve yazılıyor. React'teki yorum formu `POST /comments`'e yazıyor. Uçlar DTO döndürüyor; dışarı giden JSON’un şekli değişmedi. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor.
 
 ## Çalıştırma
 
@@ -26,7 +26,7 @@ Veri LocalDB’de, EF Core ile okunuyor ve yazılıyor. Reactteki yorum formu `P
 
 Controller → Service (`IXxxService` / `XxxService`) → AppDbContext → SQL Server
 
-- **Controller HTTP’yi karşılıyor:** Parametreyi alıyor,servisten gelen sonucu HTTP cevabına çeviriyor: veri → 200 ya da 201; null → 404 (okuma uçları) ya da 400 (yorum ekleme).
+- **Controller HTTP’yi karşılıyor:** Parametreyi alıyor, servisten gelen sonucu HTTP cevabına çeviriyor: veri → 200 ya da 201; null → 404 (okuma uçları) ya da 400 (yorum ekleme).
 - **Servis sorguyu ve DTO’yu kuruyor:** HTTP bilmiyor.
 - **Scoped Servisler:** Servisler scoped, çünkü `AppDbContext` scoped. Ayrı bir repository katmanı yok: `DbSet` zaten repository’nin, `DbContext` de unit of work’ün işini yapıyor.
 
@@ -108,13 +108,13 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Bozuk seed dosyası database update’i durdurur.** JSON okuyucu null olmaması gereken alanda null’u ve eksik zorunlu alanı reddeder; distribution tam 5 negatif olmayan sayı olmalı. Dosya yazmadan önce okunduğu için yarım veri yazılmaz.
 - **Projection:** Her uç tek sorgu atıyor ve sadece DTO’nun sütunlarını çekiyor.
 - **Async + CancellationToken:** İstemci vazgeçince sorgu kesiliyor. `TaskCanceledException` yakalanmıyor.
-- **Tarihler dışarıda UTC + Z** Tek bir converter bütün tarihleri UTC + Z ile yazıyor (zod’un `z.iso.datetime()` şeması bunu istiyor).
+- **Tarihler dışarıda UTC + Z.** Tek bir converter bütün tarihleri UTC + Z ile yazıyor (zod’un `z.iso.datetime()` şeması bunu istiyor).
 - **Collation (KEBAP kararı):** LocalDB’nin karşılaştırma kuralı (…_CI_AS) büyük/küçük harfi ayırmıyor. Tekil index de aynı kuralla çalıştığı için KEBAP ile kebap aynı kaydı gösteriyor. Büyük harfli istek 200 alıyor ve cevapta kanonik slug dönüyor.
 - **Giriş paketi sadece `itemId`, `author`, `body` taşıyor.** `id` ve `createdAt` sunucuda üretiliyor; gövdede gelirlerse yok sayılıyor (toplu atama).
 - **`Location` başlığı yok**, çünkü tek bir yorumu gösteren bir uç yok.
 - **Olmayan öğe 404 değil 400**, çünkü sorun adreste değil gövdede.
 - **Cevaptaki `itemId` kanonik slug**.
-- **Tanınmayan alanlar yok sayılır (varsayılan)**  Kalıpta createdAt alanı zaten bulunmadığından ve zorunlu alan doğrulaması yazım hatalarını 400 ile yakaladığından, eski frontend sekmelerinin göndereceği fazladan alanları reddetmek güvenlik kazancı sağlamadan kullanıcı deneyimini bozar.
+- **Tanınmayan alanlar yok sayılır (varsayılan).** Kalıpta `createdAt` alanı zaten bulunmadığından ve zorunlu alan doğrulaması yazım hatalarını 400 ile yakaladığından, eski frontend sekmelerinin göndereceği fazladan alanları reddetmek güvenlik kazancı sağlamadan kullanıcı deneyimini bozar.
 
 ## Bilinçli borçlar
 
