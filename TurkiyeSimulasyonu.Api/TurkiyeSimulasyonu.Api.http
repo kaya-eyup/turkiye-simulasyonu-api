@@ -1,71 +1,69 @@
-@TurkiyeSimulasyonu.Api_HostAddress = https://localhost:7129
-
 ### Doğru istek → 200 + order'a göre sıralı 4 kategori
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
+GET {{HostAddress}}/categories
 Accept: application/json
 
 ### Bilerek bozuk: doğru adres, yanlış metot → 405
-POST {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
+POST {{HostAddress}}/categories
 
 ### Doğru istek → 200 + tek kategori
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories/sehir-ilce
+GET {{HostAddress}}/categories/sehir-ilce
 Accept: application/json
 
 ### Bilerek bozuk: olmayan id → 404
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories/olmayan-kategori
+GET {{HostAddress}}/categories/olmayan-kategori
 
 ### Doğru istek → 200 + tek öğe
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/kebap
+GET {{HostAddress}}/items/kebap
 Accept: application/json
 
 ### Bilerek bozuk: olmayan id → 404
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/olmayan-oge
+GET {{HostAddress}}/items/olmayan-oge
 
 ### Gözlem: var olan id, büyük harfle → 200 + "id": "kebap" (collation büyük/küçük harfe duyarsız)
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/KEBAP
+GET {{HostAddress}}/items/KEBAP
 
 ### Doğru istek → 200 + sadece o kategorinin öğeleri
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=yemek-kulturu
+GET {{HostAddress}}/items?categoryId=yemek-kulturu
 Accept: application/json
 
 ### Doğru istek → 200 + 24 öğe (frontend'in arama sayfası bunu kullanıyor)
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items
+GET {{HostAddress}}/items
 Accept: application/json
 
 ### Bilerek bozuk: olmayan kategori → 200 + []
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=olmayan-kategori
+GET {{HostAddress}}/items?categoryId=olmayan-kategori
 
 ### Gözlem: değeri boş süzgeç → bütün liste
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items?categoryId=
+GET {{HostAddress}}/items?categoryId=
 
 
 ### Doğru istek → 200 + 2 yorum, önce 16:05'teki; id’ler artık sayı metni
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=baklava
+GET {{HostAddress}}/comments?itemId=baklava
 Accept: application/json
 
 ### Doğru istek (frontend'in gerçek isteği) → aynı sonuç; _sort yok sayılır
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=baklava&_sort=-createdAt
+GET {{HostAddress}}/comments?itemId=baklava&_sort=-createdAt
 Accept: application/json
 
 ### Bilerek bozuk: itemId yok → 400, errors.itemId
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+GET {{HostAddress}}/comments
 
 ### Bilerek bozuk: itemId boş → 400, errors.itemId (boş değer null'a çevrilir, ?'siz parametre zorunlu)
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=
+GET {{HostAddress}}/comments?itemId=
 
 ### Bilerek bozuk: olmayan öğe → 200 + []
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/comments?itemId=olmayan-oge
+GET {{HostAddress}}/comments?itemId=olmayan-oge
 
 ### CORS: izinli origin → 200 + Access-Control-Allow-Origin: http://localhost:5173
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
+GET {{HostAddress}}/categories
 Origin: http://localhost:5173
 
 ### Bilerek bozuk: izinsiz origin → 200, Access-Control-Allow-Origin yok (sunucu reddetmez, tarayıcı engeller)
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/categories
+GET {{HostAddress}}/categories
 Origin: https://baska-site.example
 
 ### Doğru istek → 201 + oluşturulan kayıt
-POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+POST {{HostAddress}}/comments
 Content-Type: application/json
 
 {
@@ -75,7 +73,7 @@ Content-Type: application/json
 }
 
 ### Gözlem: gövdedeki id ve createdAt yok sayılır → 201, değerler sunucunun
-POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+POST {{HostAddress}}/comments
 Content-Type: application/json
 
 {
@@ -87,7 +85,7 @@ Content-Type: application/json
 }
 
 ### Bilerek bozuk: olmayan öğe → 400, errors.itemId
-POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+POST {{HostAddress}}/comments
 Content-Type: application/json
 
 {
@@ -97,7 +95,7 @@ Content-Type: application/json
 }
 
 ### Gözlem: büyük harfli itemId → 201, cevapta kanonik "itemId": "baklava"
-POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+POST {{HostAddress}}/comments
 Content-Type: application/json
 
 {
@@ -107,7 +105,7 @@ Content-Type: application/json
 }
 
 ### Bilerek bozuk: body alanı yok → 400
-POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+POST {{HostAddress}}/comments
 Content-Type: application/json
 
 {
@@ -116,7 +114,7 @@ Content-Type: application/json
 }
 
 ### Bilerek bozuk: Content-Type yok → 415
-POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+POST {{HostAddress}}/comments
 
 {
   "itemId": "baklava",
@@ -125,7 +123,7 @@ POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
 }
 
 ### Bilerek bozuk (borç): 31 karakterlik author → 500 (Gün 55'te 400)
-POST {{TurkiyeSimulasyonu.Api_HostAddress}}/comments
+POST {{HostAddress}}/comments
 Content-Type: application/json
 
 {
@@ -135,9 +133,12 @@ Content-Type: application/json
 }
 
 ### Doğru istek → 200 + en fazla 4 öğe; son 7 günün yorum sayısına göre çoktan aza, eşitse slug
-GET {{TurkiyeSimulasyonu.Api_HostAddress}}/items/featured
+GET {{HostAddress}}/items/featured
 Accept: application/json
 
+### Gözlem: I harfli slug, büyük harfle → 200 (collation Türkçe değil; Türkçe olsaydı 404)
+GET {{HostAddress}}/items/CIG-KOFTE
 
-
-
+### CORS (canlı): Vercel origin → Access-Control-Allow-Origin başlığı var (yerelde yok)
+GET {{HostAddress}}/categories
+Origin: https://turkiye-simulasyonu-web.vercel.app
