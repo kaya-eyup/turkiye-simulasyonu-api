@@ -6,19 +6,21 @@ Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu: API o tablodak
 
 ## Durum
 
-Veri LocalDB’de, EF Core ile okunuyor ve yazılıyor. React'teki yorum formu `POST /comments`'e yazıyor. Uçlar DTO döndürüyor; dışarı giden JSON’un şekli değişmedi. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor.
+**Canlı:** https://turkiye-simulasyonu-api.runasp.net (ör. [`/categories`](https://turkiye-simulasyonu-api.runasp.net/categories)). [Vercel'deki frontend](https://turkiye-simulasyonu-web.vercel.app) bu API'ye bağlı.
+
+Veri SQL Server'da, EF Core ile okunuyor ve yazılıyor: geliştirmede LocalDB, canlıda MonsterASP. React'teki yorum formu `POST /comments`'e yazıyor. Uçlar DTO döndürüyor. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor.
 
 ## Çalıştırma
 
 ### Önkoşullar
 - LocalDB (Visual Studio ile birlikte geliyor)
-- `dotnet tool install --global dotnet-ef --version "10.*"`
+- EF Core komut aracı: proje klasöründe `dotnet tool restore`. Sürüm `dotnet-tools.json`'da sabit (10.0.13); her bilgisayarda aynı araç çalışır.
 
 ### İlk Kurulum ve Çalıştırma
 1. Proje klasöründe (TurkiyeSimulasyonu.Api/) `dotnet ef database update` çalıştır. Bu komut tabloları kurar ve seed’i çalıştırır. (Veritabanını sıfırlamak için: `dotnet ef database drop --force` + `dotnet ef database update`.)
 2. Visual Studio'da `https` profiliyle F5 (ya da `dotnet run --launch-profile https`).
 3. API `https://localhost:7129` adresinde açılır. `http://localhost:5267`'ye gelen istekler https'e yönlendirilir.
-4. İstekler `TurkiyeSimulasyonu.Api/TurkiyeSimulasyonu.Api.http` dosyasında: her uç için bir doğru istek ve bilerek bozulmuş istekler, başlıklarında beklenen sonuçla.
+4. İstekler `TurkiyeSimulasyonu.Api/TurkiyeSimulasyonu.Api.http` dosyasında: her uç için bir doğru istek ve bilerek bozulmuş istekler, başlıklarında beklenen sonuçla. Adres `http-client.env.json`'dan gelir: editörün sağ üstündeki ortam seçiciden `local` ya da `production` seçilir. Canlıda veri yazan başarılı POST'lar gönderilmez.
 
 `dotnet run` profil belirtilmeden çalıştırılırsa `launchSettings.json`'daki ilk profil (`http`) seçilir ve 7129 açılmaz.
 
@@ -30,6 +32,29 @@ Controller → Service (`IXxxService` / `XxxService`) → AppDbContext → SQL S
 - **Servis sorguyu ve DTO’yu kuruyor:** HTTP bilmiyor.
 - **Scoped Servisler:** Servisler scoped, çünkü `AppDbContext` scoped. Ayrı bir repository katmanı yok: `DbSet` zaten repository’nin, `DbContext` de unit of work’ün işini yapıyor.
 
+## Canlı ortam
+
+```
+React (Vercel) ──HTTPS──▶ API (MonsterASP: Windows + IIS, .NET 10) ──iç ağ──▶ SQL Server 2025 (MonsterASP)
+```
+
+- **Yayın:** Visual Studio'dan Web Deploy ile, framework-dependent: Sunucuda .NET 10 kurulu, paket sadece uygulamanın dosyalarını taşıyor. Sunucuda pakette olmayan dosyalar silinir. Yayından önce çalışma ağacı temiz olmalı; sunucudaki kod her zaman bir commit'e karşılık gelir.
+- **Ayarlar:** Sunucu `Production` ortamında çalışıyor (`ASPNETCORE_ENVIRONMENT` tanımlı değil, varsayılan bu).
+  - Gizli olmayan ayar depoda: `appsettings.Production.json` (CORS izni).
+  - Bağlantı dizesi depoda değil: sunucuda `ConnectionStrings__Default` ortam değişkeni. Ortam değişkenleri ayar dosyalarından sonra okunduğu için onları ezer.
+  - Dize yoksa uygulama açılışta durur (fail fast, `Program.cs`) ve IIS `500.30 - ASP.NET Core app failed to start` döner. Nedeni panelin olay günlüğünde yazar: `InvalidOperationException: Connection string 'Default' not found.`
+- **Veritabanına iki yol:**
+  - Uygulama → iç adres, `Encrypt=False`: Trafik veri merkezinden çıkmıyor.
+  - Geliştirici → dış adres (`…public.databaseasp.net`), `Encrypt=True;TrustServerCertificate=True`. Uzaktan erişim panelden açılıyor.
+- **Tablo değişiklikleri canlıya elle**, proje klasöründe:
+  ```powershell
+  $cs = Read-Host "Remote connection string"   # dış adresin dizesi; Read-Host girdisi komut geçmişine yazılmaz
+  dotnet ef migrations list --connection $cs   # bekleyenler (Pending) işaretli
+  dotnet ef database update --connection $cs
+  ```
+- **Cold start:** Ücretsiz sunucu boştaki uygulamayı durduruyor; sonraki ilk istek uygulamayı yeniden başlattığı için yavaş. Ölçüm: yeniden başlatmadan sonraki ilk istek ⟨…⟩ ms, sonrakiler ⟨…⟩ ms.
+- **HTTPS:** Let's Encrypt sertifikası; `http` istekleri `https`'e yönlendiriliyor.
+
 ## Uçlar
 
 | Uç | Başarılı | Diğer durumlar |
@@ -38,6 +63,7 @@ Controller → Service (`IXxxService` / `XxxService`) → AppDbContext → SQL S
 | `GET /categories/{id}` | 200 | olmayan id → 404 (ProblemDetails) |
 | `GET /items` | 200, bütün öğeler (`Id` sırasıyla, arama sayfası için) | |
 | `GET /items?categoryId=` | 200, kategorinin öğeleri (`Id` sırasıyla) | olmayan kategori → 200 + `[]` · boş değer → bütün öğeler |
+| `GET /items/featured` | 200, son 7 günde en çok yorum alan en fazla 4 öğe (çoktan aza, eşitse slug) | son 7 günde yorum yoksa 200 + `[]` |
 | `GET /items/{id}` | 200 | olmayan id → 404 · büyük harfli id (`KEBAP`) → 200, cevapta kanonik `"id": "kebap"` |
 | `GET /comments?itemId=` | 200, yeniden eskiye | `itemId` yok ya da boş → 400 (`errors.itemId`) · olmayan öğe → 200 + `[]` |
 | `POST /comments` | 201 + oluşturulan kayıt | olmayan öğe → 400 (`errors.itemId`) · eksik alan ya da bozuk JSON → 400 · `Content-Type` yok → 415 · uzun metin → 500 (borç) |
@@ -92,7 +118,7 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 
 ## CORS
 
-İzin verilen origin listesi `Cors:AllowedOrigins` ayarında; geliştirmede `appsettings.Development.json` içinde `http://localhost:5173`. Liste tanımlı değilse hiçbir origin'e izin verilmez.
+İzin verilen origin listesi `Cors:AllowedOrigins` ayarında: geliştirmede `appsettings.Development.json` içinde `http://localhost:5173`, canlıda `appsettings.Production.json` içinde `https://turkiye-simulasyonu-web.vercel.app`. Vercel'in önizleme adresleri izinli değil. Liste tanımlı değilse hiçbir origin'e izin verilmez.
 
 - İzinsiz bir origin'den gelen istek de 200 alır, ama cevapta `Access-Control-Allow-Origin` başlığı olmaz. Cevabı JavaScript'e vermeyen tarayıcıdır; CORS kullanıcıyı korur, API'yi değil.
 - Veri değiştiren isteklerden önce tarayıcının gönderdiği `OPTIONS` (preflight) isteğine CORS ara katmanı controller'a gitmeden 204 ile cevap verir.
@@ -118,11 +144,13 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 
 ## Bilinçli borçlar
 
-- Uzunluk doğrulaması yok; 30/500 sınırını aşan metin 500 döner. Boş author “anonim”e çevrilmiyor (Gün 55).
-- 405 cevabının gövdesi boş, hata cevapları tek şekilde değil (Gün 57).
+- Uzunluk doğrulaması yok; 30/500 sınırını aşan metin 500 döner. Boş author “anonim”e çevrilmiyor.
+- 405 cevabının gövdesi boş, hata cevapları tek şekilde değil.
 - Test yok.
-- Kullanıcı hataları 500'e dönüşüyor (Gün 55, 57).
-- `/items` ve yorum listesi sayfasız (Gün 54).
+- Kullanıcı hataları 500'e dönüşüyor.
+- `/items` ve yorum listesi sayfasız.
 - Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
-- Yerel tool manifest yok.
-- Canlı ortam için CORS ayarı yok (Gün 53).
+- `featured` ayrılmış bir kelime: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
+- Canlı veritabanına dışarıdan bağlanırken sunucu sertifikası doğrulanmıyor (`TrustServerCertificate=True`): Bağlantı şifreli, ama karşı tarafın kimliği kanıtlanmıyor. Ücretsiz katmanın sertifikası herkesin güvendiği bir otoriteden değil.
+- Yayın ve tablo değişiklikleri canlıya elle uygulanıyor; push'ta otomatik yayın yok.
+- Ücretsiz katmanda veritabanının otomatik yedeği yok.
