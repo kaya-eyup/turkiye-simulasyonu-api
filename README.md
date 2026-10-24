@@ -55,6 +55,33 @@ React (Vercel) ──HTTPS──▶ API (MonsterASP: Windows + IIS, .NET 10) ─
 - **Cold start:** Ücretsiz sunucu boştaki uygulamayı durduruyor; sonraki ilk istek uygulamayı yeniden başlattığı için yavaş. Ölçüm: yeniden başlatmadan sonraki ilk istek ⟨…⟩ ms, sonrakiler ⟨…⟩ ms.
 - **HTTPS:** Let's Encrypt sertifikası; `http` istekleri `https`'e yönlendiriliyor.
 
+## Toplu veri ekleme (Importer)
+
+`TurkiyeSimulasyonu.Importer`, var olan (boş olmayan) bir veritabanına parti
+hâlinde JSON ekleyen ayrı bir konsol aracı. `DbSeeder`'ın yerine geçmiyor —
+o sadece boş veritabanında çalışıyor; bu araç dolu veritabanına **ekleme**
+yapıyor.
+
+Eşleştirme anahtarı `Slug`: slug veritabanında yoksa eklenir, varsa
+`--update` verilmediği sürece dokunulmaz (`Score*Count` ve `CreatedAt`
+`--update` ile bile hiçbir zaman güncellenmez — canlıda gerçek oy almış
+olabilir).
+
+```powershell
+# local (varsayılan bağlantı: LocalDB)
+dotnet run --project TurkiyeSimulasyonu.Importer -- --dry-run <klasör>
+dotnet run --project TurkiyeSimulasyonu.Importer -- <klasör>
+
+# production
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" --dry-run <klasör>
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" <klasör>
+```
+
+Parti dosyası formatı: `{ "category": {id,name,emoji,order}?, "items": [...] }`.
+`"category"` sadece yeni bir kategori açılıyorsa var; mevcut kategoriye öğe
+eklerken yok. Bozuk bir dosya `SaveChanges()` öncesi `json.loads`/deserialize
+aşamasında patlar — tek transaction olduğu için ya hepsi yazılır ya hiçbiri.
+
 ## Uçlar
 
 | Uç | Başarılı | Diğer durumlar |
