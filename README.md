@@ -2,11 +2,11 @@
 
 [Türkiye Simülasyonu](https://github.com/kaya-eyup/turkiye-simulasyonu-web)'nun backend'i. ASP.NET Core Web API (.NET 10, controller tabanlı).
 
-Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu: API o tablodaki uçları karşılar.
+Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu. API bu tablonun bir kısmını karşılıyor: hangi uçların hazır, hangilerinin henüz yok olduğu tablonun **Durum** sütununda ve aşağıdaki [Bilinçli borçlar](#bilinçli-borçlar) bölümünde.
 
 ## Durum
 
-**Canlı:** https://turkiye-simulasyonu-api.runasp.net (ör. [`/categories`](https://turkiye-simulasyonu-api.runasp.net/categories)). [Vercel'deki frontend](https://turkiye-simulasyonu-web.vercel.app) bu API'ye bağlı.
+**Canlı:** https://turkiye-simulasyonu-api.runasp.net (ör. [`/categories`](https://turkiye-simulasyonu-api.runasp.net/categories)). Frontend ([https://turkiyesimulasyonu.eyupkaya.com](https://turkiyesimulasyonu.eyupkaya.com), Cloudflare; yedek: [Vercel](https://turkiye-simulasyonu-web.vercel.app)) bu API'ye bağlı.
 
 Veri SQL Server'da, EF Core ile okunuyor ve yazılıyor: geliştirmede LocalDB, canlıda MonsterASP. React'teki yorum formu `POST /comments`'e yazıyor. Uçlar DTO döndürüyor. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor.
 
@@ -35,7 +35,7 @@ Controller → Service (`IXxxService` / `XxxService`) → AppDbContext → SQL S
 ## Canlı ortam
 
 ```
-React (Vercel) ──HTTPS──▶ API (MonsterASP: Windows + IIS, .NET 10) ──iç ağ──▶ SQL Server 2025 (MonsterASP)
+React (Cloudflare · yedek: Vercel) ──HTTPS──▶ API (MonsterASP: Windows + IIS, .NET 10) ──iç ağ──▶ SQL Server 2025 (MonsterASP)
 ```
 
 - **Yayın:** Visual Studio'dan Web Deploy ile, framework-dependent: Sunucuda .NET 10 kurulu, paket sadece uygulamanın dosyalarını taşıyor. Sunucuda pakette olmayan dosyalar silinir. Yayından önce çalışma ağacı temiz olmalı; sunucudaki kod her zaman bir commit'e karşılık gelir.
@@ -52,7 +52,7 @@ React (Vercel) ──HTTPS──▶ API (MonsterASP: Windows + IIS, .NET 10) ─
   dotnet ef migrations list --connection $cs   # bekleyenler (Pending) işaretli
   dotnet ef database update --connection $cs
   ```
-- **Cold start:** Ücretsiz sunucu boştaki uygulamayı durduruyor; sonraki ilk istek uygulamayı yeniden başlattığı için yavaş. Ölçüm: yeniden başlatmadan sonraki ilk istek ⟨…⟩ ms, sonrakiler ⟨…⟩ ms.
+- **Cold start:** Ücretsiz sunucu boştaki uygulamayı durduruyor; sonraki ilk istek uygulamayı yeniden başlattığı için yavaş.
 - **HTTPS:** Let's Encrypt sertifikası; `http` istekleri `https`'e yönlendiriliyor.
 
 ## Toplu veri ekleme (Importer)
@@ -142,10 +142,9 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Uzunluklar.** `Author` 30 ve `Body` 500 sözleşmeden. Diğerleri `db.json`'daki en uzun değerlerin rahatça üstünde seçildi; `Emoji` 32, çünkü ekranda tek görünen bir emoji içeride 10'dan fazla karakter tutabilir.
 - **DTO:** `id = slug`, iç numara dışarı çıkmıyor. Başka bir kaynağa işaret eden alan, o kaynağın slug’ını taşıyor (`categoryId`, `itemId`).
 
-
 ## CORS
 
-İzin verilen origin listesi `Cors:AllowedOrigins` ayarında: geliştirmede `appsettings.Development.json` içinde `http://localhost:5173`, canlıda `appsettings.Production.json` içinde `https://turkiye-simulasyonu-web.vercel.app`. Vercel'in önizleme adresleri izinli değil. Liste tanımlı değilse hiçbir origin'e izin verilmez.
+İzin verilen origin listesi `Cors:AllowedOrigins` ayarında: geliştirmede `appsettings.Development.json` içinde `http://localhost:5173`, canlıda `appsettings.Production.json` içinde üç adres: `https://turkiyesimulasyonu.eyupkaya.com` (ana adres), `https://turkiye-simulasyonu-web.keyup017-973.workers.dev` (Cloudflare'ın kendi adresi) ve `https://turkiye-simulasyonu-web.vercel.app` (yedek). Önizleme (Preview) adresleri izinli değil. Origin, adresle birebir aynı olmalı: `https://` ile başlar, sonunda `/` olmaz. Liste tanımlı değilse hiçbir origin'e izin verilmez.
 
 - İzinsiz bir origin'den gelen istek de 200 alır, ama cevapta `Access-Control-Allow-Origin` başlığı olmaz. Cevabı JavaScript'e vermeyen tarayıcıdır; CORS kullanıcıyı korur, API'yi değil.
 - Veri değiştiren isteklerden önce tarayıcının gönderdiği `OPTIONS` (preflight) isteğine CORS ara katmanı controller'a gitmeden 204 ile cevap verir.
@@ -171,6 +170,7 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 
 ## Bilinçli borçlar
 
+- Web deposundaki sözleşmeden henüz karşılanmayanlar: `GET /items?q=&page=` (arama ve sayfalama; bugün arama istemcide), `GET /surveys/rebirth`, `PUT /surveys/rebirth/my-vote` ve sunucuda oy (`votes` tablosu, kullanıcı girişi). Oylar şimdilik sadece tarayıcıda.
 - Uzunluk doğrulaması yok; 30/500 sınırını aşan metin 500 döner. Boş author “anonim”e çevrilmiyor.
 - 405 cevabının gövdesi boş, hata cevapları tek şekilde değil.
 - Test yok.
