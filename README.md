@@ -1,5 +1,7 @@
 # turkiye-simulasyonu-api
 
+[![CI](https://github.com/kaya-eyup/turkiye-simulasyonu-api/actions/workflows/ci.yml/badge.svg)](https://github.com/kaya-eyup/turkiye-simulasyonu-api/actions/workflows/ci.yml)
+
 [Türkiye Simülasyonu](https://github.com/kaya-eyup/turkiye-simulasyonu-web)'nun backend'i. ASP.NET Core Web API (.NET 10, controller tabanlı).
 
 Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu. API bu tablonun bir kısmını karşılıyor: hangi uçların hazır, hangilerinin henüz yok olduğu tablonun **Durum** sütununda ve aşağıdaki [Bilinçli borçlar](#bilinçli-borçlar) bölümünde.
