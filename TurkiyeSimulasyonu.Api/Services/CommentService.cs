@@ -31,7 +31,7 @@ public sealed class CommentService : ICommentService
         var comment = new Comment
         {
             ItemId = item.Id,
-            Author = request.Author,
+            Author = string.IsNullOrWhiteSpace(request.Author) ? "anonim" : request.Author,
             Body = request.Body,
             CreatedAt = DateTimeOffset.UtcNow
         };

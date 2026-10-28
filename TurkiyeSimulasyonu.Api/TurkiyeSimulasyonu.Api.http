@@ -122,15 +122,29 @@ POST {{HostAddress}}/comments
   "body": "Harika bir lezzet, kesinlikle tavsiye ederim."
 }
 
-### Bilerek bozuk (borç): 31 karakterlik author → 500 (Gün 55'te 400)
+### Bilerek bozuk: 31 karakterlik author → 400, errors.Author
 POST {{HostAddress}}/comments
 Content-Type: application/json
 
-{
-  "itemId": "baklava",
-  "author": "abcdefghijabcdefghijabcdefghij1",
-  "body": "Harika bir lezzet, kesinlikle tavsiye ederim."
-}
+{ "itemId": "baklava", "author": "abcdefghijabcdefghijabcdefghij1", "body": "Harika bir lezzet." }
+
+### Bilerek bozuk: 501 karakterlik body → 400, errors.Body
+POST {{HostAddress}}/comments
+Content-Type: application/json
+
+{ "itemId": "baklava", "author": "Ahmet", "body": "<buraya 501 karakter yapıştır>" }
+
+### Bilerek bozuk: kırpılınca 2 karakter → 400, errors.Body
+POST {{HostAddress}}/comments
+Content-Type: application/json
+
+{ "itemId": "baklava", "author": "Ahmet", "body": "   ab   " }
+
+### Gözlem: author boş → 201, cevapta "author": "anonim"
+POST {{HostAddress}}/comments
+Content-Type: application/json
+
+{ "itemId": "baklava", "author": "   ", "body": "Harika bir lezzet." }
 
 ### Doğru istek → 200 + en fazla 4 öğe; son 7 günün yorum sayısına göre çoktan aza, eşitse slug
 GET {{HostAddress}}/items/featured
