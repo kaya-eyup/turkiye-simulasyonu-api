@@ -20,15 +20,15 @@ builder.Services.AddControllers()
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+var commentsPermitLimit = builder.Configuration.GetValue("RateLimiting:CommentsWrite:PermitLimit", 5);
 builder.Services.AddRateLimiter(options =>
 {
-    // Her IP kendi sayacını alır: dakikada 5 istek, sıra yok
     options.AddPolicy(RateLimitPolicies.CommentsWrite, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 5,
+                PermitLimit = commentsPermitLimit,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -115,3 +115,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// WebApplicationFactory<Program> için: top-level Program varsayılan olarak internal, test projesi göremez
+public partial class Program;
