@@ -11,7 +11,7 @@ namespace TurkiyeSimulasyonu.Api.Services;
 public sealed class ItemService : IItemService
 {
     private readonly AppDbContext _db;
-    private const int FeaturedCount = 4;
+    private const int FeaturedCount = 5;
     private static readonly TimeSpan FeaturedWindow = TimeSpan.FromDays(7);
     public const int SearchPageSize = 12;
 
@@ -62,36 +62,56 @@ public sealed class ItemService : IItemService
     {
         var since = DateTimeOffset.UtcNow - FeaturedWindow;
 
-        var topSlugs = await _db.Comments
+        // Havuz: son 7 günde EN AZ bir yorum almış bütün öğeler.
+        // Kasıtlı olarak sayıya göre sıralamıyoruz: aksi halde azınlık bir grubun
+        // ("X okulu vs Y okulu" tipi yorum savaşları) sürekli üst sıraları işgal
+        // etmesi, bölümü sonsuza kadar kilitler. Burada tek kriter "aktif mi".
+        var activeSlugs = await _db.Comments
             .Where(c => c.CreatedAt >= since)
-            .GroupBy(c => c.Item.Slug)
-            .Select(g => new
-            {
-                Slug = g.Key,
-                CommentCount = g.Count()
-            })
-            .OrderByDescending(x => x.CommentCount)
-            .ThenBy(x => x.Slug)
-            .Take(FeaturedCount)
-            .Select(x => x.Slug)
-            .ToListAsync(cancellationToken);
+            .Select(c => c.Item.Slug)
+            .Distinct()
+            .ToArrayAsync(cancellationToken);
 
-        if (topSlugs.Count == 0)
+        Random.Shared.Shuffle(activeSlugs);
+        var pickedSlugs = activeSlugs.Take(FeaturedCount).ToList();
+
+        var result = new List<ItemDto>(FeaturedCount);
+
+        if (pickedSlugs.Count > 0)
         {
-            return [];
+            var items = await _db.Items
+                .Where(i => pickedSlugs.Contains(i.Slug))
+                .Select(s_toDto)
+                .ToListAsync(cancellationToken);
+
+            result.AddRange(items);
         }
 
-        var items = await _db.Items
-            .Where(i => topSlugs.Contains(i.Slug))
-            .Select(s_toDto)
-            .ToListAsync(cancellationToken);
+        // Havuz 5'i doldurmadıysa (az aktif öğe varsa) kalan yer tamamen rastgele dolar
+        var missing = FeaturedCount - result.Count;
+        if (missing > 0)
+        {
+            var candidateIds = await _db.Items
+                .Where(i => !pickedSlugs.Contains(i.Slug))
+                .Select(i => i.Id)
+                .ToArrayAsync(cancellationToken);
 
-        var itemDict = items.ToDictionary(i => i.Id);
+            Random.Shared.Shuffle(candidateIds);
+            var pickedIds = candidateIds.Take(missing).ToList();
 
-        return topSlugs
-            .Where(slug => itemDict.ContainsKey(slug))
-            .Select(slug => itemDict[slug])
-            .ToList();
+            var fillers = await _db.Items
+                .Where(i => pickedIds.Contains(i.Id))
+                .Select(s_toDto)
+                .ToListAsync(cancellationToken);
+
+            result.AddRange(fillers);
+        }
+
+        // "Aktif" ve "dolgu" öğeler görünüşte birbirinden ayrılmasın diye
+        // son bir karıştırma: ilk sıradaki hep "gerçek seçilmiş" olmasın.
+        var resultArray = result.ToArray();
+        Random.Shared.Shuffle(resultArray);
+        return resultArray.ToList();
     }
 
     public async Task<SearchResultDto> SearchAsync(string? q, int page, CancellationToken cancellationToken)

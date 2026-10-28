@@ -111,4 +111,23 @@ public class ItemsTests
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Featured_AlwaysReturnsFiveItems()
+    {
+        var items = await _client.GetFromJsonAsync<List<ItemDto>>("/items/featured");
+
+        Assert.NotNull(items);
+        Assert.Equal(5, items.Count);
+    }
+
+    // Rastgele dolgu, zaten seçilmiş bir öğeyi ikinci kez koymamalı
+    [Fact]
+    public async Task Featured_DoesNotRepeatItems()
+    {
+        var items = await _client.GetFromJsonAsync<List<ItemDto>>("/items/featured");
+
+        Assert.NotNull(items);
+        Assert.Equal(items.Count, items.Select(i => i.Id).Distinct().Count());
+    }
 }
