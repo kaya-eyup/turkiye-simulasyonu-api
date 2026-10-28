@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+using System.Threading.RateLimiting;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Data.Seed;
 using TurkiyeSimulasyonu.Api.Infrastructure;
@@ -17,6 +20,43 @@ builder.Services.AddControllers()
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddRateLimiter(options =>
+{
+    // Her IP kendi sayacını alır: dakikada 5 istek, sıra yok
+    options.AddPolicy(RateLimitPolicies.CommentsWrite, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        var httpContext = context.HttpContext;
+        httpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            httpContext.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
+
+        await httpContext.RequestServices
+            .GetRequiredService<IProblemDetailsService>()
+            .WriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = httpContext,
+                ProblemDetails = new ProblemDetails
+                {
+                    Status = StatusCodes.Status429TooManyRequests,
+                    Title = "Çok fazla istek gönderdin, biraz bekleyip tekrar dene."
+                }
+            });
+    };
+});
 builder.Services.AddOpenApi();
 
 var seedPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "Seed", "db.json");
@@ -49,8 +89,6 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod()
         .AllowAnyHeader());
 });
-builder.Services.AddProblemDetails();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var app = builder.Build();
 app.UseExceptionHandler();
@@ -64,7 +102,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Uç-bazlı limit için routing açıkça yazılmalı; limiter ondan sonra gelir
+app.UseRouting();
+
 app.UseCors(FrontendCorsPolicy);
+
+// Cors'tan sonra: 429 cevabı da CORS başlığını taşır
+app.UseRateLimiter();
 
 app.UseAuthorization();
 

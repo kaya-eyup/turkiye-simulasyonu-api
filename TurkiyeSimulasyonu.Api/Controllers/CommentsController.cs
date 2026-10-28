@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TurkiyeSimulasyonu.Api.Dtos;
+using TurkiyeSimulasyonu.Api.Infrastructure;
 using TurkiyeSimulasyonu.Api.Services;
 
 namespace TurkiyeSimulasyonu.Api.Controllers;
@@ -21,6 +23,9 @@ public class CommentsController : ControllerBase
         var result = await _commentService.GetByItemAsync(itemId, cancellationToken);
         return Ok(result);
     }
+
+    [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.CommentsWrite)]
 
     [HttpPost]
     public async Task<ActionResult<CommentDto>> Create(
