@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 using TurkiyeSimulasyonu.Api.Dtos;
 using TurkiyeSimulasyonu.Api.Services;
 
@@ -27,6 +28,16 @@ public class ItemsController : ControllerBase
     {
         var featuredItems = await _itemService.GetFeaturedAsync(cancellationToken);
         return Ok(featuredItems);
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<SearchResultDto>> Search(
+    [StringLength(100)] string? q,
+    [Range(1, int.MaxValue)] int page = 1,
+    CancellationToken cancellationToken = default)
+    {
+        var result = await _itemService.SearchAsync(q, page, cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id}")]

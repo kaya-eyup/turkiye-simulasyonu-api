@@ -156,3 +156,31 @@ GET {{HostAddress}}/items/CIG-KOFTE
 ### CORS (canlı): Vercel origin → Access-Control-Allow-Origin başlığı var (yerelde yok)
 GET {{HostAddress}}/categories
 Origin: https://turkiye-simulasyonu-web.vercel.app
+
+### Doğru istek → 200 + { items, total, totalPages }
+GET {{HostAddress}}/items/search?q=kebap
+Accept: application/json
+
+### Türkçe karakter duyarsız: ÇİĞ ile cig aynı sonucu vermeli
+GET {{HostAddress}}/items/search?q=ÇİĞ
+Accept: application/json
+
+### Aynı sonucu veriyor
+GET {{HostAddress}}/items/search?q=cig
+Accept: application/json
+
+### Sayfa 2 → farklı 12 öğe, total ve totalPages aynı
+GET {{HostAddress}}/items/search?q=a&page=2
+Accept: application/json
+
+### Gözlem: boş sorgu → 200 + total 0 (veritabanına hiç gidilmiyor)
+GET {{HostAddress}}/items/search?q=
+
+### Gözlem: eşleşmeyen sorgu → 200 + total 0
+GET {{HostAddress}}/items/search?q=zzzzzzzz
+
+### Bilerek bozuk: 101 karakterlik q → 400
+GET {{HostAddress}}/items/search?q=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+### Bilerek bozuk: page=0 → 400
+GET {{HostAddress}}/items/search?q=kebap&page=0
