@@ -102,7 +102,7 @@ dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connect
 | `GET /categories/{id}` | 200 | olmayan id → 404 (ProblemDetails) |
 | `GET /items` | 200, bütün öğeler (`Id` sırasıyla, arama sayfası için) | |
 | `GET /items?categoryId=` | 200, kategorinin öğeleri (`Id` sırasıyla) | olmayan kategori → 200 + `[]` · boş değer → bütün öğeler |
-| `GET /items/featured` | 200, son 7 günde en çok yorum alan en fazla 4 öğe (çoktan aza, eşitse slug) | son 7 günde yorum yoksa 200 + `[]` |
+| `GET /items/featured`    | 200, her zaman 5 öğe, aktifliğe göre rastgele öğelerle dolar | boşluk kalma durumunda tamamen rastgele öğeler seçilir |
 | `GET /items/search?q=&page=` | 200, `{ items, total, totalPages }`; sayfa başına 12 öğe, `Id` sırasıyla | boş ya da eşleşmeyen `q` → 200 + `total: 0` · son sayfanın ötesi → 200 + boş `items`, `total` aynı · `q` 100 karakterden uzun ya da `page < 1` → 400 |
 | `GET /items/{id}` | 200 | olmayan id → 404 · büyük harfli id (`KEBAP`) → 200, cevapta kanonik `"id": "kebap"` |
 | `GET /comments?itemId=` | 200, yeniden eskiye | `itemId` yok ya da boş → 400 (`errors.itemId`) · olmayan öğe → 200 + `[]` |
@@ -158,6 +158,8 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Arama ayrı sütunda, dil ayarından bağımsız.** Aranan metin ve kayıttaki metin aynı kurala göre sadeleştirilir (`"Çiğ Köfte"` → `"cig kofte"`) ve arama bu sütunda yapılır. `SearchNormalizer` Türkçe harfleri açık bir tabloyla eşler; `ToLower()` kullanılmaz, çünkü o makinenin dil ayarına bakar: Türkçe ayarlı bir sunucuda `"I"` küçülünce `"ı"`, İngilizce ayarlıda `"i"` olur ve aynı kod iki makinede farklı sonuç verir ("Turkish I problem"). Sütunu `SaveChanges` doldurduğu için DbSeeder, Importer ve API aynı kuralı kullanır, kimse doldurmayı unutamaz.
 - **Arama `/items`'ta değil `/items/search`'te.** `/items?categoryId=` kategori sayfası için sayfalanmamış tam listeyi dönüyor. Aynı uçtan bazen dizi bazen `{ items, total, totalPages }` dönmesi, istemcide union, belge sayfasında ise anlatılamayan bir uç demekti. Arama kendi ucunda; `featured` ile aynı desen.
 - **Sayfalama veritabanında.** Toplam `COUNT(*)` ile, sayfa `OFFSET … FETCH NEXT` ile alınır (EF'te `Skip`/`Take`). İki sorgu atılır: sayfa sayısını bilmek için toplam gerekir, toplamı öğrenmek için bütün satırları çekmek gerekmez. Sayfa boyutu 12.
+- **`featured` yorum sayısına göre sıralamıyor, sadece "aktif mi" diye bakıyor.** Son 7 günde en az bir yorum almış öğeler bir havuza giriyor ve o havuzdan rastgele 5 tane seçiliyor. Sayıya göre sıralama yapsaydık, birkaç öğenin yoğun yorum çekmesi (örn. rekabetçi gruplar arası "en çok yorum" yarışı) bölümü sürekli aynı öğelerle kilitlerdi. Havuz 5'i doldurmazsa kalan yer tamamen rastgele öğelerle tamamlanır.
+- **Rastgele seçim bellekte.** SQL Server'da rastgele sıralamanın yolu `ORDER BY NEWID()`; `EF.Functions.Random()` ise `RAND()`'a çevrilir ve `RAND()` sorgu başına tek değer ürettiği için hiç karıştırmaz. Aday id'ler çekilip `Random.Shared.Shuffle` (Fisher-Yates) ile karıştırılıyor.
 
 ## CORS
 
@@ -199,3 +201,5 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - Ücretsiz katmanda veritabanının otomatik yedeği yok.
 - `SearchText`'te index yok. Arama `LIKE '%…%'` ile yapılıyor ve bu kalıp baştan eşleşmediği için B-tree index kullanılamaz; işe yaramayacak bir index sadece her yazmayı yavaşlatırdı. 1224 kayıtta tam tablo taraması kabul edilebilir. Gerçek çözüm full-text search, Blok H'de.
 - Arama sonuçları alaka düzeyine göre değil `Id` sırasına göre dönüyor.
+- `featured` dolgusu bütün aday id'leri belleğe çekip orada karıştırıyor. 1224 kayıtta bedeli yok; tablo büyürse `ORDER BY NEWID()` ya da `TABLESAMPLE` gerekir.
+- Dolgu her istekte yeniden seçiliyor; "haftanın" seçilmişleri her sayfa yenilemede değişebilir.
