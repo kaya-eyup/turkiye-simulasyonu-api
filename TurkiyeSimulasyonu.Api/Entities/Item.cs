@@ -15,6 +15,7 @@ public class Item
     public int Score4Count { get; set; }
     public int Score5Count { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    public string SearchText { get; set; } = "";
     public int CategoryId { get; set; }
     public Category Category { get; set; } = null!;
     public List<Comment> Comments { get; set; } = [];

@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TurkiyeSimulasyonu.Api.Entities;
-
+using TurkiyeSimulasyonu.Api.Search;
 namespace TurkiyeSimulasyonu.Api.Data;
 
 public sealed class AppDbContext : DbContext
@@ -28,12 +28,14 @@ public sealed class AppDbContext : DbContext
 
         modelBuilder.Entity<Item>(item =>
         {
-            // SEN: Slug (100 + tekil), Name (100), Emoji (32), Summary (500)
+            // Slug (100 + tekil), Name (100), Emoji (32), Summary (500)
             item.Property(i => i.Slug).HasMaxLength(100);
             item.HasIndex(i => i.Slug).IsUnique();
             item.Property(i => i.Name).HasMaxLength(100);
             item.Property(i => i.Emoji).HasMaxLength(32);
             item.Property(i => i.Summary).HasMaxLength(500);
+            // 100 (Name) + 1 + 500 (Summary) = en fazla 601; index yok (LIKE '%…%' index kullanamaz)
+            item.Property(i => i.SearchText).HasMaxLength(700);
 
             // Her öğe bir kategoriye ait; öğesi olan kategori silinemez
             item.HasOne(i => i.Category)
@@ -44,7 +46,7 @@ public sealed class AppDbContext : DbContext
 
         modelBuilder.Entity<Comment>(comment =>
         {
-            // 30 ve 500 sözleşmeden (sunucu doğrulaması Gün 55)
+            // 30 ve 500 sözleşmeden 
             comment.Property(co => co.Author).HasMaxLength(30);
             comment.Property(co => co.Body).HasMaxLength(500);
 
@@ -54,5 +56,32 @@ public sealed class AppDbContext : DbContext
                    .HasForeignKey(co => co.ItemId)
                    .OnDelete(DeleteBehavior.Cascade);
         });
+    }
+
+    // SearchText tek yerden dolar: DbSeeder, Importer ve API aynı kuralı kullanır, kimse unutamaz.
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        FillSearchText();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        FillSearchText();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void FillSearchText()
+    {
+        foreach (var entry in ChangeTracker.Entries<Item>())
+        {
+            if (entry.State is EntityState.Added or EntityState.Modified)
+            {
+                entry.Entity.SearchText =
+                    SearchNormalizer.Normalize($"{entry.Entity.Name} {entry.Entity.Summary}");
+            }
+        }
     }
 }
