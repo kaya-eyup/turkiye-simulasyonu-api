@@ -126,6 +126,11 @@ namespace TurkiyeSimulasyonu.Api.Migrations
                     b.Property<int>("Score5Count")
                         .HasColumnType("int");
 
+                    b.Property<string>("SearchText")
+                        .IsRequired()
+                        .HasMaxLength(700)
+                        .HasColumnType("nvarchar(700)");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(100)
