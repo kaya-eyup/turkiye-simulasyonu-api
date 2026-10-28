@@ -26,8 +26,6 @@ public class CommentsController : ControllerBase
 
     [HttpPost]
     [EnableRateLimiting(RateLimitPolicies.CommentsWrite)]
-
-    [HttpPost]
     public async Task<ActionResult<CommentDto>> Create(
         CreateCommentRequest request,
         CancellationToken cancellationToken)
