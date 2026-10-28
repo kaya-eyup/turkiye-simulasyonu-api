@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Entities;
+using TurkiyeSimulasyonu.Api.Search;
 
 // ---------------------------------------------------------------------------
 // Parti JSON'larını (build_batchNN.py çıktısı) var olan veritabanına yazar.
@@ -20,6 +21,10 @@ using TurkiyeSimulasyonu.Api.Entities;
 //   dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<cs>" --update out/
 //   dotnet run --project TurkiyeSimulasyonu.Importer -- --dry-run out/
 //
+// Bakım komutu (dosya almaz, tek başına çalışır):
+//   dotnet run --project TurkiyeSimulasyonu.Importer -- --backfill-search [--dry-run]
+//   dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<cs>" --backfill-search
+//
 // Bağlantı sırası: --connection > ConnectionStrings__Default ortam değişkeni
 // > appsettings.Development.json'daki yerel LocalDB adresi (varsayılan).
 // ---------------------------------------------------------------------------
@@ -31,6 +36,7 @@ var remaining = new List<string>(args);
 string? connectionString = null;
 bool updateExisting = false;
 bool dryRun = false;
+bool backfillSearch = false;
 
 for (int i = remaining.Count - 1; i >= 0; i--)
 {
@@ -49,13 +55,66 @@ for (int i = remaining.Count - 1; i >= 0; i--)
         dryRun = true;
         remaining.RemoveAt(i);
     }
+    else if (remaining[i] == "--backfill-search")
+    {
+        backfillSearch = true;
+        remaining.RemoveAt(i);
+    }
 }
 
 connectionString ??= Environment.GetEnvironmentVariable("ConnectionStrings__Default") ?? DefaultLocalConnection;
 
+// ---------------------------------------------------------------------------
+// --backfill-search: Var olan bütün öğelerin SearchText'ini yeniden hesaplatır.
+//
+// Yeni sütun eklendiğinde eski satırları doldurmak için bir kez çalıştırılır
+// (sektörde buna backfill denir). Değeri AppDbContext.SaveChanges hesaplıyor;
+// burada yaptığımız tek şey her satıra dokunup kaydettirmek.
+//
+// Tekrar çalıştırmak zararsız: Değer değişmiyorsa EF o satır için UPDATE
+// göndermez, yani komut kaç kez çalışırsa çalışsın sonuç aynı (idempotent).
+// ---------------------------------------------------------------------------
+if (backfillSearch)
+{
+    if (remaining.Count > 0)
+    {
+        Console.Error.WriteLine("--backfill-search dosya almaz; dosya içe aktarmayı ayrı çalıştır.");
+        return 1;
+    }
+
+    var backfillOptions = new DbContextOptionsBuilder<AppDbContext>().UseSqlServer(connectionString).Options;
+    using var backfillDb = new AppDbContext(backfillOptions);
+
+    // 1200 satır belleğe sığar; EF'in değişiklik takibi için satırların elde olması gerekiyor.
+    var allItems = backfillDb.Items.ToList();
+
+    foreach (var item in allItems)
+    {
+        item.SearchText = SearchNormalizer.Normalize($"{item.Name} {item.Summary}");
+    }
+
+    // Değeri gerçekten değişen satırlar "Modified" işaretlenir; değişmeyenler "Unchanged" kalır.
+    var changed = backfillDb.ChangeTracker.Entries<Item>()
+        .Count(e => e.State == EntityState.Modified);
+
+    Console.WriteLine($"{allItems.Count} öğe okundu, {changed} tanesinin SearchText'i değişiyor.");
+
+    if (dryRun)
+    {
+        Console.WriteLine("\nDRY RUN — hiçbir şey yazılmadı.");
+        return 0;
+    }
+
+    // Tek SaveChanges = tek transaction: ya hepsi yazılır ya hiçbiri.
+    backfillDb.SaveChanges();
+    Console.WriteLine("\nYazıldı.");
+    return 0;
+}
+
 if (remaining.Count == 0)
 {
     Console.Error.WriteLine("Kullanım: dotnet run -- [--connection \"<cs>\"] [--update] [--dry-run] <dosya-veya-klasor> [...]");
+    Console.Error.WriteLine("          dotnet run -- [--connection \"<cs>\"] [--dry-run] --backfill-search");
     return 1;
 }
 
@@ -140,6 +199,7 @@ foreach (var file in files)
 
         if (!existingItemSlugs.Contains(item.Id))
         {
+            // SearchText burada set edilmiyor: AppDbContext.SaveChanges kaydederken kendisi dolduruyor.
             db.Items.Add(new Item
             {
                 Slug = item.Id,
