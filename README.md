@@ -88,6 +88,12 @@ Parti dosyası formatı: `{ "category": {id,name,emoji,order}?, "items": [...] }
 eklerken yok. Bozuk bir dosya `SaveChanges()` öncesi `json.loads`/deserialize
 aşamasında patlar — tek transaction olduğu için ya hepsi yazılır ya hiçbiri.
 
+Bakım komutu — `--backfill-search`: Var olan bütün öğelerin `SearchText`'ini yeniden hesaplatır. Yeni sütun eklendiğinde eski satırları doldurmak için bir kez çalıştırılır. Dosya almaz. Tekrar çalıştırmak zararsız: Değer değişmeyen satır için EF `UPDATE` göndermez.
+
+dotnet run --project TurkiyeSimulasyonu.Importer -- --backfill-search --dry-run
+dotnet run --project TurkiyeSimulasyonu.Importer -- --backfill-search
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" --backfill-search
+
 ## Uçlar
 
 | Uç | Başarılı | Diğer durumlar |
@@ -97,6 +103,7 @@ aşamasında patlar — tek transaction olduğu için ya hepsi yazılır ya hiç
 | `GET /items` | 200, bütün öğeler (`Id` sırasıyla, arama sayfası için) | |
 | `GET /items?categoryId=` | 200, kategorinin öğeleri (`Id` sırasıyla) | olmayan kategori → 200 + `[]` · boş değer → bütün öğeler |
 | `GET /items/featured` | 200, son 7 günde en çok yorum alan en fazla 4 öğe (çoktan aza, eşitse slug) | son 7 günde yorum yoksa 200 + `[]` |
+| `GET /items/search?q=&page=` | 200, `{ items, total, totalPages }`; sayfa başına 12 öğe, `Id` sırasıyla | boş ya da eşleşmeyen `q` → 200 + `total: 0` · son sayfanın ötesi → 200 + boş `items`, `total` aynı · `q` 100 karakterden uzun ya da `page < 1` → 400 |
 | `GET /items/{id}` | 200 | olmayan id → 404 · büyük harfli id (`KEBAP`) → 200, cevapta kanonik `"id": "kebap"` |
 | `GET /comments?itemId=` | 200, yeniden eskiye | `itemId` yok ya da boş → 400 (`errors.itemId`) · olmayan öğe → 200 + `[]` |
 | `POST /comments` | 201 + oluşturulan kayıt | olmayan öğe → 400 (`errors.itemId`) · eksik alan ya da bozuk JSON → 400 · `Content-Type` yok → 415 · uzun ya da çok kısa metin → 400 |
@@ -125,6 +132,7 @@ Tablo yapısı `InitialCreate` migration’ında tanımlı. Seed `UseSeeding` + 
   - `Summary`: metin, zorunlu, en fazla 500 karakter.
   - `Score1Count` … `Score5Count`: int, zorunlu; her puanın aldığı oy sayısı.
   - `CreatedAt`: `DateTimeOffset`, zorunlu.
+  - `SearchText`: metin, zorunlu, en fazla 700 karakter; `Name + " " + Summary`'nin sadeleştirilmiş hâli. `AppDbContext.SaveChanges` dolduruyor, elle yazılmıyor. Index yok (aşağıda).
 - **Comments**
   - `Id`: int, birincil anahtar (identity).
   - `ItemId`: int, zorunlu; foreign key → `Items.Id`.
@@ -147,6 +155,9 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Tarihler `DateTimeOffset`.** Değer, UTC'ye göre farkıyla birlikte saklanır; an tek anlamlı tanımlanır.
 - **Uzunluklar.** `Author` 30 ve `Body` 500 sözleşmeden. Diğerleri `db.json`'daki en uzun değerlerin rahatça üstünde seçildi; `Emoji` 32, çünkü ekranda tek görünen bir emoji içeride 10'dan fazla karakter tutabilir.
 - **DTO:** `id = slug`, iç numara dışarı çıkmıyor. Başka bir kaynağa işaret eden alan, o kaynağın slug’ını taşıyor (`categoryId`, `itemId`).
+- **Arama ayrı sütunda, dil ayarından bağımsız.** Aranan metin ve kayıttaki metin aynı kurala göre sadeleştirilir (`"Çiğ Köfte"` → `"cig kofte"`) ve arama bu sütunda yapılır. `SearchNormalizer` Türkçe harfleri açık bir tabloyla eşler; `ToLower()` kullanılmaz, çünkü o makinenin dil ayarına bakar: Türkçe ayarlı bir sunucuda `"I"` küçülünce `"ı"`, İngilizce ayarlıda `"i"` olur ve aynı kod iki makinede farklı sonuç verir ("Turkish I problem"). Sütunu `SaveChanges` doldurduğu için DbSeeder, Importer ve API aynı kuralı kullanır, kimse doldurmayı unutamaz.
+- **Arama `/items`'ta değil `/items/search`'te.** `/items?categoryId=` kategori sayfası için sayfalanmamış tam listeyi dönüyor. Aynı uçtan bazen dizi bazen `{ items, total, totalPages }` dönmesi, istemcide union, belge sayfasında ise anlatılamayan bir uç demekti. Arama kendi ucunda; `featured` ile aynı desen.
+- **Sayfalama veritabanında.** Toplam `COUNT(*)` ile, sayfa `OFFSET … FETCH NEXT` ile alınır (EF'te `Skip`/`Take`). İki sorgu atılır: sayfa sayısını bilmek için toplam gerekir, toplamı öğrenmek için bütün satırları çekmek gerekmez. Sayfa boyutu 12.
 
 ## CORS
 
@@ -179,10 +190,12 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 
 ## Bilinçli borçlar
 
-- Web deposundaki sözleşmeden henüz karşılanmayanlar: `GET /items?q=&page=` (arama ve sayfalama; bugün arama istemcide), `GET /surveys/rebirth`, `PUT /surveys/rebirth/my-vote` ve sunucuda oy (`votes` tablosu, kullanıcı girişi). Oylar şimdilik sadece tarayıcıda.
+- Web deposundaki sözleşmeden henüz karşılanmayanlar:`GET /surveys/rebirth`, `PUT /surveys/rebirth/my-vote` ve sunucuda oy (`votes` tablosu, kullanıcı girişi). Oylar şimdilik sadece tarayıcıda.
 - `/items` ve yorum listesi sayfasız.
 - Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
-- `featured` ayrılmış bir kelime: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
+- `featured ve search` ayrılmış kelimeler: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
 - Canlı veritabanına dışarıdan bağlanırken sunucu sertifikası doğrulanmıyor (`TrustServerCertificate=True`): Bağlantı şifreli, ama karşı tarafın kimliği kanıtlanmıyor. Ücretsiz katmanın sertifikası herkesin güvendiği bir otoriteden değil.
 - Yayın ve tablo değişiklikleri canlıya elle uygulanıyor; push'ta otomatik yayın yok.
 - Ücretsiz katmanda veritabanının otomatik yedeği yok.
+- `SearchText`'te index yok. Arama `LIKE '%…%'` ile yapılıyor ve bu kalıp baştan eşleşmediği için B-tree index kullanılamaz; işe yaramayacak bir index sadece her yazmayı yavaşlatırdı. 1224 kayıtta tam tablo taraması kabul edilebilir. Gerçek çözüm full-text search, Blok H'de.
+- Arama sonuçları alaka düzeyine göre değil `Id` sırasına göre dönüyor.
