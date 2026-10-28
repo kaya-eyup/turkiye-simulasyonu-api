@@ -93,7 +93,7 @@ aşamasında patlar — tek transaction olduğu için ya hepsi yazılır ya hiç
 | `GET /items/featured` | 200, son 7 günde en çok yorum alan en fazla 4 öğe (çoktan aza, eşitse slug) | son 7 günde yorum yoksa 200 + `[]` |
 | `GET /items/{id}` | 200 | olmayan id → 404 · büyük harfli id (`KEBAP`) → 200, cevapta kanonik `"id": "kebap"` |
 | `GET /comments?itemId=` | 200, yeniden eskiye | `itemId` yok ya da boş → 400 (`errors.itemId`) · olmayan öğe → 200 + `[]` |
-| `POST /comments` | 201 + oluşturulan kayıt | olmayan öğe → 400 (`errors.itemId`) · eksik alan ya da bozuk JSON → 400 · `Content-Type` yok → 415 · uzun metin → 500 (borç) |
+| `POST /comments` | 201 + oluşturulan kayıt | olmayan öğe → 400 (`errors.itemId`) · eksik alan ya da bozuk JSON → 400 · `Content-Type` yok → 415 · uzun ya da çok kısa metin → 400 |
 
 - Tanınmayan query parametreleri yok sayılır (ör. json-server'dan kalma `_sort`).
 - Desteklenmeyen metot → 405.
@@ -167,14 +167,14 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Olmayan öğe 404 değil 400**, çünkü sorun adreste değil gövdede.
 - **Cevaptaki `itemId` kanonik slug**.
 - **Tanınmayan alanlar yok sayılır (varsayılan).** Kalıpta `createdAt` alanı zaten bulunmadığından ve zorunlu alan doğrulaması yazım hatalarını 400 ile yakaladığından, eski frontend sekmelerinin göndereceği fazladan alanları reddetmek güvenlik kazancı sağlamadan kullanıcı deneyimini bozar.
+- Doğrulama: DataAnnotations CreateCommentRequest üzerinde; metin kırpıldıktan sonra kontrol edilir; boş author “anonim” olur.
+- Hatalar: AddProblemDetails + GlobalExceptionHandler + UseStatusCodePages; ayrıntı sadece logda.
+- Hız sınırı: POST /comments için IP başına dakikada 5 istek (fixed window), aşılınca 429 + Retry-After.
 
 ## Bilinçli borçlar
 
 - Web deposundaki sözleşmeden henüz karşılanmayanlar: `GET /items?q=&page=` (arama ve sayfalama; bugün arama istemcide), `GET /surveys/rebirth`, `PUT /surveys/rebirth/my-vote` ve sunucuda oy (`votes` tablosu, kullanıcı girişi). Oylar şimdilik sadece tarayıcıda.
-- Uzunluk doğrulaması yok; 30/500 sınırını aşan metin 500 döner. Boş author “anonim”e çevrilmiyor.
-- 405 cevabının gövdesi boş, hata cevapları tek şekilde değil.
 - Test yok.
-- Kullanıcı hataları 500'e dönüşüyor.
 - `/items` ve yorum listesi sayfasız.
 - Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
 - `featured` ayrılmış bir kelime: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
