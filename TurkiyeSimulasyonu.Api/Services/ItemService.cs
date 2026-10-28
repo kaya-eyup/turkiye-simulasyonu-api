@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Linq.Expressions;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Dtos;
@@ -60,19 +61,31 @@ public sealed class ItemService : IItemService
 
     public async Task<List<ItemDto>> GetFeaturedAsync(CancellationToken cancellationToken)
     {
-        var since = DateTimeOffset.UtcNow - FeaturedWindow;
+        var today = DateTimeOffset.UtcNow.UtcDateTime.Date;
 
-        // Havuz: son 7 günde EN AZ bir yorum almış bütün öğeler.
-        // Kasıtlı olarak sayıya göre sıralamıyoruz: aksi halde azınlık bir grubun
-        // ("X okulu vs Y okulu" tipi yorum savaşları) sürekli üst sıraları işgal
-        // etmesi, bölümü sonsuza kadar kilitler. Burada tek kriter "aktif mi".
+        // Bu ISO haftasının Pazartesi'si. DayOfWeek: Pazar=0, Pazartesi=1, ... Cumartesi=6
+        // olduğu için Pazartesi'ye kaç gün kaldığını bu formülle buluyoruz.
+        var daysSinceMonday = ((int)today.DayOfWeek + 6) % 7;
+        var weekStart = new DateTimeOffset(today.AddDays(-daysSinceMonday), TimeSpan.Zero);
+
+        // Havuz: "son 7 gün" (kayan pencere) değil, GERÇEK takvim haftası (Pazartesi'den bugüne).
+        // Haftanın başında havuz küçük/boş olabilir — bu doğru, henüz o hafta az şey konuşulmuş demektir.
+        // OrderBy şart: SQL Server sıralama vermeden satır sırasını garanti etmez, aşağıdaki
+        // tohumlu karıştırmanın her istekte aynı sonucu vermesi için girdi sırası sabit olmalı.
         var activeSlugs = await _db.Comments
-            .Where(c => c.CreatedAt >= since)
+            .Where(c => c.CreatedAt >= weekStart)
             .Select(c => c.Item.Slug)
             .Distinct()
+            .OrderBy(slug => slug)
             .ToArrayAsync(cancellationToken);
 
-        Random.Shared.Shuffle(activeSlugs);
+        // Tohum: yıl + ISO hafta numarası. Aynı hafta içindeki her istek aynı tohumu üretir
+        // → sonuç o hafta boyunca sabit kalır (sayfa yenilendiğinde değişmez).
+        // Hafta değişince tohum değişir → otomatik olarak yeni bir haftalık seçki.
+        var seed = ISOWeek.GetYear(today) * 100 + ISOWeek.GetWeekOfYear(today);
+        var weeklyRandom = new Random(seed);
+
+        weeklyRandom.Shuffle(activeSlugs);
         var pickedSlugs = activeSlugs.Take(FeaturedCount).ToList();
 
         var result = new List<ItemDto>(FeaturedCount);
@@ -87,16 +100,16 @@ public sealed class ItemService : IItemService
             result.AddRange(items);
         }
 
-        // Havuz 5'i doldurmadıysa (az aktif öğe varsa) kalan yer tamamen rastgele dolar
         var missing = FeaturedCount - result.Count;
         if (missing > 0)
         {
             var candidateIds = await _db.Items
                 .Where(i => !pickedSlugs.Contains(i.Slug))
+                .OrderBy(i => i.Id)
                 .Select(i => i.Id)
                 .ToArrayAsync(cancellationToken);
 
-            Random.Shared.Shuffle(candidateIds);
+            weeklyRandom.Shuffle(candidateIds);
             var pickedIds = candidateIds.Take(missing).ToList();
 
             var fillers = await _db.Items
@@ -107,10 +120,8 @@ public sealed class ItemService : IItemService
             result.AddRange(fillers);
         }
 
-        // "Aktif" ve "dolgu" öğeler görünüşte birbirinden ayrılmasın diye
-        // son bir karıştırma: ilk sıradaki hep "gerçek seçilmiş" olmasın.
         var resultArray = result.ToArray();
-        Random.Shared.Shuffle(resultArray);
+        weeklyRandom.Shuffle(resultArray);
         return resultArray.ToList();
     }
 
