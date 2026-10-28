@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Data.Seed;
+using TurkiyeSimulasyonu.Api.Infrastructure;
 using TurkiyeSimulasyonu.Api.Json;
 using TurkiyeSimulasyonu.Api.Services;
 
@@ -14,6 +15,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new UtcDateTimeOffsetConverter());
     });
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi();
 
 var seedPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "Seed", "db.json");
@@ -46,8 +49,12 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod()
         .AllowAnyHeader());
 });
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var app = builder.Build();
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
