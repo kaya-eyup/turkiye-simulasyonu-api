@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Dtos;
 using TurkiyeSimulasyonu.Api.Entities;
+using TurkiyeSimulasyonu.Api.Search;
 
 namespace TurkiyeSimulasyonu.Api.Services;
 
@@ -12,6 +13,7 @@ public sealed class ItemService : IItemService
     private readonly AppDbContext _db;
     private const int FeaturedCount = 4;
     private static readonly TimeSpan FeaturedWindow = TimeSpan.FromDays(7);
+    public const int SearchPageSize = 12;
 
     // EF bu tarifi okuyup SQL'e çevirir; metot olsaydı içini göremezdi
     private static readonly Expression<Func<Item, ItemDto>> s_toDto = i => new ItemDto
@@ -90,5 +92,35 @@ public sealed class ItemService : IItemService
             .Where(slug => itemDict.ContainsKey(slug))
             .Select(slug => itemDict[slug])
             .ToList();
+    }
+
+    public async Task<SearchResultDto> SearchAsync(string? q, int page, CancellationToken cancellationToken)
+    {
+        var normalized = SearchNormalizer.Normalize(q);
+
+        // Boş sorguda veritabanına hiç gitmiyoruz: "hepsini getir" demek olurdu
+        if (normalized.Length == 0)
+        {
+            return new SearchResultDto { Items = [], Total = 0, TotalPages = 0 };
+        }
+
+        // Süzgeç tarifi bir kez kuruluyor, iki ayrı sorguda kullanılıyor: biri sayım, biri sayfa
+        var query = _db.Items.Where(i => i.SearchText.Contains(normalized));
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(i => i.Id)
+            .Skip((page - 1) * SearchPageSize)
+            .Take(SearchPageSize)
+            .Select(s_toDto)
+            .ToListAsync(cancellationToken);
+
+        return new SearchResultDto
+        {
+            Items = items,
+            Total = total,
+            TotalPages = (int)Math.Ceiling(total / (double)SearchPageSize),
+        };
     }
 }
