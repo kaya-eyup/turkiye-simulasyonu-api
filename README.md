@@ -24,6 +24,10 @@ Veri SQL Server'da, EF Core ile okunuyor ve yazılıyor: geliştirmede LocalDB, 
 
 `dotnet run` profil belirtilmeden çalıştırılırsa `launchSettings.json`'daki ilk profil (`http`) seçilir ve 7129 açılmaz.
 
+### Testler
+
+`dotnet test` (çözüm kökünde). Entegrasyon testleri API'yi bellekte ayağa kaldırır ve gerçek bir SQL Server'a bağlanır: yerelde LocalDB'deki `TurkiyeSimulasyonu_Tests` (her çalışmada silinip migration + seed ile yeniden kurulur), CI'da GitHub Actions'ın yanında açtığı SQL Server konteyneri (`TEST_DB_CONNECTION` ortam değişkeni). SQLite ya da bellek içi veritabanı kullanılmıyor: `KEBAP → 200` davranışı SQL Server'ın harf duyarsız karşılaştırmasından geliyor.
+
 ## Mimari
 
 Controller → Service (`IXxxService` / `XxxService`) → AppDbContext → SQL Server
@@ -174,7 +178,6 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 ## Bilinçli borçlar
 
 - Web deposundaki sözleşmeden henüz karşılanmayanlar: `GET /items?q=&page=` (arama ve sayfalama; bugün arama istemcide), `GET /surveys/rebirth`, `PUT /surveys/rebirth/my-vote` ve sunucuda oy (`votes` tablosu, kullanıcı girişi). Oylar şimdilik sadece tarayıcıda.
-- Test yok.
 - `/items` ve yorum listesi sayfasız.
 - Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
 - `featured` ayrılmış bir kelime: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
