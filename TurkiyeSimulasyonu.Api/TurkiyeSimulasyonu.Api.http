@@ -132,7 +132,7 @@ Content-Type: application/json
 POST {{HostAddress}}/comments
 Content-Type: application/json
 
-{ "itemId": "baklava", "author": "Ahmet", "body": "<buraya 501 karakter yapıştır>" }
+{ "itemId": "baklava", "author": "Ahmet", "body": "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc" }
 
 ### Bilerek bozuk: kırpılınca 2 karakter → 400, errors.Body
 POST {{HostAddress}}/comments
