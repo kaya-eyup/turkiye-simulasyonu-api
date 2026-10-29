@@ -73,6 +73,7 @@ builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IRebirthSurveyService, RebirthSurveyService>();
+builder.Services.AddScoped<IItemVoteService, ItemVoteService>();
 
 // CORS: tarayıcıda hangi adreslerdeki sayfaların bu API'nin cevabını okuyabileceği.
 // Liste ortama göre appsettings'ten gelir; liste yoksa kimseye izin verilmez.
