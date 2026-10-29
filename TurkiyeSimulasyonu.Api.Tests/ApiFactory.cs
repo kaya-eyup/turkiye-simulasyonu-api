@@ -18,6 +18,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public ApiFactory()
     {
         // Program.cs bu değerleri başlangıçta okur; ortam değişkeni appsettings'in üstüne yazar
+        Environment.SetEnvironmentVariable("RateLimiting__SurveyWrite__PermitLimit", "1000");
         Environment.SetEnvironmentVariable("ConnectionStrings__Default", ConnectionString);
         // Testlerdeki çok sayıda POST 429'a takılmasın
         Environment.SetEnvironmentVariable("RateLimiting__CommentsWrite__PermitLimit", "1000");
