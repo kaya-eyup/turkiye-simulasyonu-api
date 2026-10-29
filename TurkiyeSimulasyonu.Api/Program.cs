@@ -74,6 +74,7 @@ builder.Services.AddDbContext<AppDbContext>(options => options
 builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IRebirthSurveyService, RebirthSurveyService>();
 
 // CORS: tarayıcıda hangi adreslerdeki sayfaların bu API'nin cevabını okuyabileceği.
 // Liste ortama göre appsettings'ten gelir; liste yoksa kimseye izin verilmez.
