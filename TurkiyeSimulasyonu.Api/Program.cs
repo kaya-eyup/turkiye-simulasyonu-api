@@ -21,17 +21,15 @@ builder.Services.AddControllers()
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 var commentsPermitLimit = builder.Configuration.GetValue("RateLimiting:CommentsWrite:PermitLimit", 5);
+
+// Ankette listede gezinip fikir değiştirmek doğal: yorumdan geniş
+var surveyPermitLimit = builder.Configuration.GetValue("RateLimiting:SurveyWrite:PermitLimit", 20);
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddPolicy(RateLimitPolicies.CommentsWrite, httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = commentsPermitLimit,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            }));
+    options.AddPolicy(RateLimitPolicies.CommentsWrite,
+        httpContext => PerIpPerMinute(httpContext, commentsPermitLimit));
+    options.AddPolicy(RateLimitPolicies.SurveyWrite,
+        httpContext => PerIpPerMinute(httpContext, surveyPermitLimit));
 
     options.OnRejected = async (context, cancellationToken) =>
     {
@@ -117,5 +115,16 @@ app.MapControllers();
 
 app.Run();
 
+// IP başına dakikalık sabit pencere. Her politika kendi sayaçlarını tutar:
+// 5 yorum yazmak anketteki hakkını yemez.
+static RateLimitPartition<string> PerIpPerMinute(HttpContext httpContext, int permitLimit) =>
+    RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
 // WebApplicationFactory<Program> için: top-level Program varsayılan olarak internal, test projesi göremez
 public partial class Program;
