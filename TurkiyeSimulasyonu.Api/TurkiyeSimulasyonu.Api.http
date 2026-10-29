@@ -267,3 +267,61 @@ Content-Type: application/json
 X-Voter-Id: abc
 
 { "country": "DE" }
+
+
+### ===== Öğe oyları (yerelde dene; production'a başarılı PUT/DELETE gönderme: gerçek dağılıma yazar) =====
+
+### Gözlem: bu kimliğin henüz oyu yok → 200 + []
+GET {{HostAddress}}/items/my-votes
+X-Voter-Id: {{voterId}}
+
+### Önce dağılıma bak (distribution) → 200
+GET {{HostAddress}}/items/kebap
+Accept: application/json
+
+### Doğru istek: ilk oy → 200 + { "itemId": "kebap", "stars": 4 }
+PUT {{HostAddress}}/items/kebap/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ "stars": 4 }
+
+### Gözlem: distribution'da 4 yıldız (dizinin 3. elemanı) 1 arttı
+GET {{HostAddress}}/items/kebap
+Accept: application/json
+
+### Gözlem: oy değişiyor → 200; 4'ün sayısı geri düşer, 5'inki artar, toplam aynı
+PUT {{HostAddress}}/items/kebap/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ "stars": 5 }
+
+### Doğru istek → 200 + [{ "itemId": "kebap", "stars": 5 }]
+GET {{HostAddress}}/items/my-votes
+X-Voter-Id: {{voterId}}
+
+### Doğru istek: oyu geri al → 204, gövde yok; dağılım ilk hâline döner
+DELETE {{HostAddress}}/items/kebap/my-vote
+X-Voter-Id: {{voterId}}
+
+### Gözlem: tekrar sil → yine 204 (oy zaten yok, sonuç aynı)
+DELETE {{HostAddress}}/items/kebap/my-vote
+X-Voter-Id: {{voterId}}
+
+### Bilerek bozuk: aralık dışı puan → 400, errors.Stars
+PUT {{HostAddress}}/items/kebap/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ "stars": 6 }
+
+### Bilerek bozuk: olmayan öğe → 404
+PUT {{HostAddress}}/items/olmayan-oge/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ "stars": 3 }
+
+### Bilerek bozuk: kimlik başlığı yok → 400, errors["X-Voter-Id"]
+GET {{HostAddress}}/items/my-votes

@@ -24,13 +24,18 @@ var commentsPermitLimit = builder.Configuration.GetValue("RateLimiting:CommentsW
 
 // Ankette listede gezinip fikir değiştirmek doğal: yorumdan geniş
 var surveyPermitLimit = builder.Configuration.GetValue("RateLimiting:SurveyWrite:PermitLimit", 20);
+
+// Öğe sayfalarını gezip puan vermek tek soruluk anketten çok daha sık bir iş
+var itemVotesPermitLimit = builder.Configuration.GetValue("RateLimiting:ItemVotesWrite:PermitLimit", 60);
+
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy(RateLimitPolicies.CommentsWrite,
         httpContext => PerIpPerMinute(httpContext, commentsPermitLimit));
     options.AddPolicy(RateLimitPolicies.SurveyWrite,
         httpContext => PerIpPerMinute(httpContext, surveyPermitLimit));
-
+    options.AddPolicy(RateLimitPolicies.ItemVotesWrite,
+        httpContext => PerIpPerMinute(httpContext, itemVotesPermitLimit));
     options.OnRejected = async (context, cancellationToken) =>
     {
         var httpContext = context.HttpContext;
