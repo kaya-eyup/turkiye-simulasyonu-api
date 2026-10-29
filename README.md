@@ -12,6 +12,8 @@ Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu. API bu tablonu
 
 Veri SQL Server'da, EF Core ile okunuyor ve yazılıyor: geliştirmede LocalDB, canlıda MonsterASP. React'teki yorum formu `POST /comments`'e yazıyor. Uçlar DTO döndürüyor. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor.
 
+Yeniden Doğma Anketi'nin oyları sunucuda, `RebirthVotes` tablosunda; frontend tarayıcı başına ürettiği anonim kimliği `X-Voter-Id` başlığıyla gönderiyor.
+
 ## Çalıştırma
 
 ### Önkoşullar
@@ -107,6 +109,9 @@ dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connect
 | `GET /items/{id}` | 200 | olmayan id → 404 · büyük harfli id (`KEBAP`) → 200, cevapta kanonik `"id": "kebap"` |
 | `GET /comments?itemId=` | 200, yeniden eskiye | `itemId` yok ya da boş → 400 (`errors.itemId`) · olmayan öğe → 200 + `[]` |
 | `POST /comments` | 201 + oluşturulan kayıt | olmayan öğe → 400 (`errors.itemId`) · eksik alan ya da bozuk JSON → 400 · `Content-Type` yok → 415 · uzun ya da çok kısa metin → 400 |
+| `GET /surveys/rebirth` | 200, `{ total, results: [{ country, count }] }`; çoktan aza, eşitse koda göre | hiç oy yok → 200 + `total: 0`, `results: []` |
+| `GET /surveys/rebirth/my-vote` | 200 + `{ country }`; kimlik `X-Voter-Id` başlığında | henüz oy yok → 404 · başlık yok ya da GUID değil → 400 |
+| `PUT /surveys/rebirth/my-vote` | 200 + `{ country }`; ilk oy da değişiklik de 200 | atanmamış ya da alfa-3 kod → 400 (`errors.Country`) · başlık yok ya da GUID değil → 400 · IP başına dakikada 20'yi aşınca → 429 |
 
 - Tanınmayan query parametreleri yok sayılır (ör. json-server'dan kalma `_sort`).
 - Desteklenmeyen metot → 405.
@@ -139,6 +144,11 @@ Tablo yapısı `InitialCreate` migration’ında tanımlı. Seed `UseSeeding` + 
   - `Author`: metin, zorunlu, en fazla 30 karakter.
   - `Body`: metin, zorunlu, en fazla 500 karakter.
   - `CreatedAt`: `DateTimeOffset`, zorunlu.
+- **RebirthVotes**
+  - `Id`: int, birincil anahtar (identity).
+  - `VoterId`: `uniqueidentifier`, zorunlu, tekil; tarayıcının ürettiği anonim kimlik.
+  - `CountryCode`: `char(2)`, zorunlu, ISO 3166-1 alfa-2, büyük harf; index'li.
+  - `CreatedAt`, `UpdatedAt`: `DateTimeOffset`, zorunlu.
 
 Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsayılan index'i var: bir öğenin yorumları bütün tablo okunmadan bulunur.
 
@@ -146,6 +156,18 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 
 - **Kategori → öğe (1-N):** Öğesi olan kategori silinemez (`Restrict`).
 - **Öğe → yorum (1-N):** Öğe silinirse yorumları da silinir (`Cascade`).
+
+## Yeniden Doğma Anketi
+
+- **Girişsiz v1: tarayıcı başına bir oy.** Frontend ilk ziyarette `crypto.randomUUID()` ile bir kimlik üretip saklıyor ve her istekte `X-Voter-Id` başlığıyla gönderiyor. Çerez değil başlık, çünkü frontend ve API farklı alan adlarında; Safari gibi tarayıcılar başka alan adındaki sunucunun çerezini engelliyor. Giriş geldiğinde bu başlığın yerini `Authorization` alacak; gövde (`{ country }`) değişmeyecek.
+- **Kimlik gövdede değil başlıkta**, çünkü "kim olduğun" kaynağın içeriği değil, isteğin bağlamı.
+- **Upsert, yarışa dayanıklı.** Önce `UPDATE … WHERE VoterId = @id` (okumadan, `ExecuteUpdateAsync`). 0 satır değiştiyse `INSERT`. `INSERT` tekillik hatası verirse (SQL Server 2601/2627) aynı kimlikten başka bir istek araya girmiş demektir: `UPDATE` tekrar çalıştırılır. Doğruluğu kod değil `VoterId`'deki tekil index garanti ediyor; kod yalnızca kısıtın cevabına göre davranıyor. Entegrasyon testi aynı kimlikten aynı anda 20 istek atıp tek oy sayıldığını ve hiçbir isteğin 500 almadığını kontrol ediyor.
+- **PUT, POST değil.** İstek "benim oyum bu olsun" diyor; aynı isteği tekrar göndermek sonucu değiştirmiyor. Çift tıklama ve ağ kopunca yeniden deneme güvenli. İlk oy da değişiklik de 200.
+- **Sayaç yok, sonuç her istekte `GROUP BY` ile sayılıyor.** Oy değiştirmek tek satırın tek sütununu değiştirmek demek; "eskiyi azalt, yeniyi artır" ikilisine ve onları birlikte tutacak transaction'a gerek kalmıyor, sayaçla gerçek oylar ayrışamıyor. En fazla 249 grup var. Toplam ayrı bir `COUNT(*)` değil, aynı sonucun toplamı: İki sorgu arasında gelen oy, toplamla listeyi tutarsız yapamıyor.
+- **Ülke listesi kodda** (`Surveys/Countries.cs`, ISO 3166-1'in resmi 249 kodu), .NET'in `RegionInfo`'sundan değil. `RegionInfo` makinenin dil verisine (ICU) bakıyor; Windows sunucu ile Linux CI farklı liste verebilir. Kosova (`XK`) gibi yaygın ama resmi listede olmayan kodlar kabul edilmiyor.
+- **Kod `ToUpperInvariant` ile büyütülüyor.** `ToUpper()` Türkçe ayarlı makinede `"it"`'i `"İT"` yapar ve İtalya'ya oy veren 400 alırdı (Turkish I problem, aramadaki `SearchNormalizer` kararının aynısı).
+- **Birincil anahtar sıralı `int`, `VoterId` ayrı tekil index.** SQL Server satırları birincil anahtar sırasına diziyor (clustered index). Rastgele GUID anahtar her yeni satırı ortaya sıkıştırırdı; sıralı sayıda yeni satır hep sona ekleniyor.
+- **`CountryCode` `char(2)`, ASCII.** Hep tam 2 harf; `nvarchar(2)`'den küçük.
 
 ### Kararlar
 
@@ -188,11 +210,13 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Tanınmayan alanlar yok sayılır (varsayılan).** Kalıpta `createdAt` alanı zaten bulunmadığından ve zorunlu alan doğrulaması yazım hatalarını 400 ile yakaladığından, eski frontend sekmelerinin göndereceği fazladan alanları reddetmek güvenlik kazancı sağlamadan kullanıcı deneyimini bozar.
 - Doğrulama: DataAnnotations CreateCommentRequest üzerinde; metin kırpıldıktan sonra kontrol edilir; boş author “anonim” olur.
 - Hatalar: AddProblemDetails + GlobalExceptionHandler + UseStatusCodePages; ayrıntı sadece logda.
-- Hız sınırı: POST /comments için IP başına dakikada 5 istek (fixed window), aşılınca 429 + Retry-After.
+- Hız sınırı: IP başına dakikalık sabit pencere, aşılınca 429 + Retry-After. `POST /comments` 5, `PUT /surveys/rebirth/my-vote` 20 (listede gezinip fikir değiştirmek doğal). Her politika kendi sayacını tutuyor.
 
 ## Bilinçli borçlar
 
-- Web deposundaki sözleşmeden henüz karşılanmayanlar:`GET /surveys/rebirth`, `PUT /surveys/rebirth/my-vote` ve sunucuda oy (`votes` tablosu, kullanıcı girişi). Oylar şimdilik sadece tarayıcıda.
+- Web deposundaki sözleşmeden henüz karşılanmayan: sunucuda öğe oyu (`votes` tablosu). Öğe oyları şimdilik sadece tarayıcıda.
+- Anket kimliği anonim: Tarayıcı verisini silen ya da başlığa yeni bir GUID yazan biri tekrar oy verebilir. İstek sınırı bunu yavaşlatıyor ama durdurmuyor. Giriş geldiğinde oy kullanıcıya bağlanacak.
+- Anket sonuçları her istekte yeniden sayılıyor. Binlerce oyda milisaniyeler; milyonlarca oyda önbellek ya da ayrı bir özet tablo gerekir.
 - `/items` ve yorum listesi sayfasız.
 - Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
 - `featured ve search` ayrılmış kelimeler: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
