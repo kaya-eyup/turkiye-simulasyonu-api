@@ -14,6 +14,8 @@ Veri SQL Server'da, EF Core ile okunuyor ve yazılıyor: geliştirmede LocalDB, 
 
 Yeniden Doğma Anketi'nin oyları sunucuda, `RebirthVotes` tablosunda; frontend tarayıcı başına ürettiği anonim kimliği `X-Voter-Id` başlığıyla gönderiyor.
 
+Öğe oyları da sunucuda: ItemVotes tablosu + Items'taki ScoreNCount sayaçları, aynı anonim kimlikle.
+
 ## Çalıştırma
 
 ### Önkoşullar
@@ -113,7 +115,9 @@ dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connect
 | `GET /surveys/rebirth` | 200, `{ total, results: [{ country, count }] }`; çoktan aza, eşitse koda göre | hiç oy yok → 200 + `total: 0`, `results: []` |
 | `GET /surveys/rebirth/my-vote` | 200 + `{ country }`; kimlik `X-Voter-Id` başlığında | henüz oy yok → 404 · başlık yok ya da GUID değil → 400 |
 | `PUT /surveys/rebirth/my-vote` | 200 + `{ country }`; ilk oy da değişiklik de 200 | atanmamış ya da alfa-3 kod → 400 (`errors.Country`) · başlık yok ya da GUID değil → 400 · IP başına dakikada 20'yi aşınca → 429 |
-
+| `GET /items/my-votes` | 200 + `[{ itemId, stars }]`; kimlik `X-Voter-Id` başlığında | hiç oy yok → 200 + `[]` · başlık yok ya da GUID değil → 400 |
+| `PUT /items/{id}/my-vote` | 200 + `{ itemId, stars }` (kanonik slug); ilk oy da değişiklik de 200 | `stars` 1-5 dışında ya da yok → 400 (`errors.Stars`) · olmayan öğe → 404 · başlık yok → 400 · IP başına dakikada 60'ı aşınca → 429 |
+| `DELETE /items/{id}/my-vote` | 204 (oy zaten yoksa da) | olmayan öğe → 404 · başlık yok → 400 · 429 aynı sınır |
 - Tanınmayan query parametreleri yok sayılır (ör. json-server'dan kalma `_sort`).
 - Desteklenmeyen metot → 405.
 
@@ -150,6 +154,13 @@ Tablo yapısı `InitialCreate` migration’ında tanımlı. Seed `UseSeeding` + 
   - `VoterId`: `uniqueidentifier`, zorunlu, tekil; tarayıcının ürettiği anonim kimlik.
   - `CountryCode`: `char(2)`, zorunlu, ISO 3166-1 alfa-2, büyük harf; index'li.
   - `CreatedAt`, `UpdatedAt`: `DateTimeOffset`, zorunlu.
+- **ItemVotes**
+  - `Id`: int, birincil anahtar (identity).
+  - `VoterId`: `uniqueidentifier`, zorunlu; anketle aynı anonim kimlik.
+  - `ItemId`: int, zorunlu; foreign key → `Items.Id`.
+  - `Stars`: `tinyint`, zorunlu; `CHECK (Stars BETWEEN 1 AND 5)`.
+  - `CreatedAt`, `UpdatedAt`: `DateTimeOffset`, zorunlu.
+  - `(VoterId, ItemId)` tekil index: tarayıcı başına öğe başına tek oy; VoterId önde olduğu için "bir tarayıcının bütün oyları" da aynı index'le bulunur.
 
 Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsayılan index'i var: bir öğenin yorumları bütün tablo okunmadan bulunur.
 
@@ -157,6 +168,7 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 
 - **Kategori → öğe (1-N):** Öğesi olan kategori silinemez (`Restrict`).
 - **Öğe → yorum (1-N):** Öğe silinirse yorumları da silinir (`Cascade`).
+- **Öğe → oy (1-N):** Öğe silinirse oyları da silinir (Cascade).
 
 ## Yeniden Doğma Anketi
 
@@ -169,6 +181,15 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Kod `ToUpperInvariant` ile büyütülüyor.** `ToUpper()` Türkçe ayarlı makinede `"it"`'i `"İT"` yapar ve İtalya'ya oy veren 400 alırdı (Turkish I problem, aramadaki `SearchNormalizer` kararının aynısı).
 - **Birincil anahtar sıralı `int`, `VoterId` ayrı tekil index.** SQL Server satırları birincil anahtar sırasına diziyor (clustered index). Rastgele GUID anahtar her yeni satırı ortaya sıkıştırırdı; sıralı sayıda yeni satır hep sona ekleniyor.
 - **`CountryCode` `char(2)`, ASCII.** Hep tam 2 harf; `nvarchar(2)`'den küçük.
+
+## Öğe oyları
+
+- **Anketin tersine sayaç var.** Dağılım her liste sayfasında okunuyor (1224 öğeye kadar) ve öğelerin seed'den gelen başlangıç dağılımı sadece `ScoreNCount` sütunlarında; `ItemVotes`'u saymak başlangıç sayılarını kaybederdi. Çok okunan sayı yazarken bir kez hesaplanıyor.
+- **Oy satırı ve sayaç aynı transaction'da.** Ya ikisi birden yazılır ya hiçbiri.
+- **Oy değişikliği karşılaştır-ve-değiştir ile:** `UPDATE … SET Stars = @new WHERE … AND Stars = @old`. Arada başka bir istek oyu değiştirdiyse 0 satır etkilenir ve işlem baştan okunarak tekrar denenir (en fazla 5 kez). Koşul olmasa iki eşzamanlı değişiklik yanlış sütunu azaltır, dağılım sessizce bozulurdu. Entegrasyon testi aynı kimlikten aynı anda 5 farklı puan gönderip tek oy sayıldığını kontrol ediyor.
+- **Sayaçlar okunmadan kaydırılıyor:** `SET Score4Count = Score4Count + 1` tek komut; satır kilidi aynı öğeye gelen oyları sıraya sokuyor. Bütün yollar kilitleri aynı sırayla alıyor (önce `ItemVotes`, sonra `Items`); kilitlenme oluşmuyor.
+- **`DELETE` tekrarlanabilir:** oy yoksa da 204. **`my-votes` koleksiyon:** boşsa 404 değil `[]`.
+- **Tarayıcıdaki eski oylar taşınmadı.** Birkaç tarayıcıdaki birkaç oy için tek seferlik taşıma kodu, depoda kalıcı yük olurdu.
 
 ### Kararlar
 
@@ -211,16 +232,15 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Tanınmayan alanlar yok sayılır (varsayılan).** Kalıpta `createdAt` alanı zaten bulunmadığından ve zorunlu alan doğrulaması yazım hatalarını 400 ile yakaladığından, eski frontend sekmelerinin göndereceği fazladan alanları reddetmek güvenlik kazancı sağlamadan kullanıcı deneyimini bozar.
 - Doğrulama: DataAnnotations CreateCommentRequest üzerinde; metin kırpıldıktan sonra kontrol edilir; boş author “anonim” olur.
 - Hatalar: AddProblemDetails + GlobalExceptionHandler + UseStatusCodePages; ayrıntı sadece logda.
-- Hız sınırı: IP başına dakikalık sabit pencere, aşılınca 429 + Retry-After. `POST /comments` 5, `PUT /surveys/rebirth/my-vote` 20 (listede gezinip fikir değiştirmek doğal). Her politika kendi sayacını tutuyor.
+- Hız sınırı: IP başına dakikalık sabit pencere, aşılınca 429 + Retry-After. `POST /comments` 5,  PUT/DELETE /items/{id}/my-vote 60 (öğeler arasında gezip puan vermek sık bir iş).
 
 ## Bilinçli borçlar
 
-- Web deposundaki sözleşmeden henüz karşılanmayan: sunucuda öğe oyu (`votes` tablosu). Öğe oyları şimdilik sadece tarayıcıda.
 - Anket kimliği anonim: Tarayıcı verisini silen ya da başlığa yeni bir GUID yazan biri tekrar oy verebilir. İstek sınırı bunu yavaşlatıyor ama durdurmuyor. Giriş geldiğinde oy kullanıcıya bağlanacak.
 - Anket sonuçları her istekte yeniden sayılıyor. Binlerce oyda milisaniyeler; milyonlarca oyda önbellek ya da ayrı bir özet tablo gerekir.
 - `/items` ve yorum listesi sayfasız.
 - Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
-- `featured` ve `search` ayrılmış kelimeler: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
+- `featured`, `search` ve `my-votes` ayrılmış kelimeler: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
 - Canlı veritabanına dışarıdan bağlanırken sunucu sertifikası doğrulanmıyor (`TrustServerCertificate=True`): Bağlantı şifreli, ama karşı tarafın kimliği kanıtlanmıyor. Ücretsiz katmanın sertifikası herkesin güvendiği bir otoriteden değil.
 - Yayın ve tablo değişiklikleri canlıya elle uygulanıyor; push'ta otomatik yayın yok.
 - Ücretsiz katmanda veritabanının otomatik yedeği yok.
@@ -228,3 +248,4 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - Arama sonuçları alaka düzeyine göre değil `Id` sırasına göre dönüyor.
 - `featured` dolgusu bütün aday id'leri belleğe çekip orada karıştırıyor. 1224 kayıtta bedeli yok; tablo büyürse karıştırma SQL'e taşınmalı. `ORDER BY NEWID()` her istekte farklı sonuç verip haftalık sabitliği bozacağı için tohumdan türetilen bir sıralama gerekir (ör. `ORDER BY CHECKSUM(Id, @seed)`).
 - `GetFeaturedAsync`, sistem saatini (`DateTimeOffset.UtcNow`) doğrudan okuyor; bu, hafta geçişi davranışını otomatik testle doğrulamayı zorlaştırıyor. Gerçek bir üründe `TimeProvider` DI ile enjekte edilip sahte bir saatle test edilirdi.
+- Sayaçlar = seed'in sahte dağılımı + gerçek oylar; seed'in payı ayrı tutulmadığı için sayaçlar `ItemVotes`'tan yeniden hesaplanamıyor. Bir hata sayacı bozarsa düzeltecek kaynak yok. Gerçek üründe başlangıç payı ayrı sütunda tutulur (ya da hiç sahte veri olmaz) ve bir kontrol sorgusu sayacı oy tablosuyla karşılaştırır.
