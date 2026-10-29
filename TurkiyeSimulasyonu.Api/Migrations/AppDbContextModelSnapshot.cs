@@ -151,6 +151,42 @@ namespace TurkiyeSimulasyonu.Api.Migrations
                     b.ToTable("Items");
                 });
 
+            modelBuilder.Entity("TurkiyeSimulasyonu.Api.Entities.ItemVote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Stars")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("VoterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("VoterId", "ItemId")
+                        .IsUnique();
+
+                    b.ToTable("ItemVotes", t =>
+                        {
+                            t.HasCheckConstraint("CK_ItemVotes_Stars", "[Stars] BETWEEN 1 AND 5");
+                        });
+                });
+
             modelBuilder.Entity("TurkiyeSimulasyonu.Api.Entities.RebirthVote", b =>
                 {
                     b.Property<int>("Id")
@@ -205,6 +241,17 @@ namespace TurkiyeSimulasyonu.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("TurkiyeSimulasyonu.Api.Entities.ItemVote", b =>
+                {
+                    b.HasOne("TurkiyeSimulasyonu.Api.Entities.Item", "Item")
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Item");
                 });
 
             modelBuilder.Entity("TurkiyeSimulasyonu.Api.Entities.Category", b =>
