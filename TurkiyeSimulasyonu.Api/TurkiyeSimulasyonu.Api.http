@@ -184,3 +184,86 @@ GET {{HostAddress}}/items/search?q=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 ### Bilerek bozuk: page=0 → 400
 GET {{HostAddress}}/items/search?q=kebap&page=0
+
+### ===== Yeniden Doğma Anketi =====
+### Canlıda (production) başarılı PUT gönderme: gerçek ankete oy yazar
+@voterId = 7f3c2a1e-4b5d-4c6e-8f9a-0b1c2d3e4f5a
+@otherVoterId = 2a9e8d7c-6b5a-4f3e-9d2c-1b0a9f8e7d6c
+
+### Doğru istek → 200 + { total, results } (boş tabloda total 0, results [])
+GET {{HostAddress}}/surveys/rebirth
+Accept: application/json
+
+### Gözlem: henüz oy yok → 404 + ProblemDetails
+GET {{HostAddress}}/surveys/rebirth/my-vote
+X-Voter-Id: {{voterId}}
+
+### Doğru istek: ilk oy → 200 + { "country": "DE" }
+PUT {{HostAddress}}/surveys/rebirth/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ "country": "DE" }
+
+### Doğru istek → 200 + { "country": "DE" }
+GET {{HostAddress}}/surveys/rebirth/my-vote
+X-Voter-Id: {{voterId}}
+
+### Gözlem: aynı kimlik oyunu değiştiriyor, küçük harfle → 200 + "JP"; yeni satır açılmaz
+PUT {{HostAddress}}/surveys/rebirth/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ "country": "jp" }
+
+### Doğru istek: başka bir tarayıcı → 200
+PUT {{HostAddress}}/surveys/rebirth/my-vote
+Content-Type: application/json
+X-Voter-Id: {{otherVoterId}}
+
+{ "country": "DE" }
+
+### Gözlem → total 2; DE 1, JP 1 (sayı eşit, koda göre: önce DE)
+GET {{HostAddress}}/surveys/rebirth
+Accept: application/json
+
+### Gözlem (Turkish I): "it" → 200 + "IT"
+PUT {{HostAddress}}/surveys/rebirth/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ "country": "it" }
+
+### Bilerek bozuk: atanmamış kod → 400, errors.Country
+PUT {{HostAddress}}/surveys/rebirth/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ "country": "XX" }
+
+### Bilerek bozuk: alfa-3 kod → 400, errors.Country
+PUT {{HostAddress}}/surveys/rebirth/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ "country": "TUR" }
+
+### Bilerek bozuk: country alanı yok → 400
+PUT {{HostAddress}}/surveys/rebirth/my-vote
+Content-Type: application/json
+X-Voter-Id: {{voterId}}
+
+{ }
+
+### Bilerek bozuk: kimlik başlığı yok → 400, errors["X-Voter-Id"]
+PUT {{HostAddress}}/surveys/rebirth/my-vote
+Content-Type: application/json
+
+{ "country": "DE" }
+
+### Bilerek bozuk: GUID olmayan kimlik → 400
+PUT {{HostAddress}}/surveys/rebirth/my-vote
+Content-Type: application/json
+X-Voter-Id: abc
+
+{ "country": "DE" }
