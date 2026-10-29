@@ -151,6 +151,40 @@ namespace TurkiyeSimulasyonu.Api.Migrations
                     b.ToTable("Items");
                 });
 
+            modelBuilder.Entity("TurkiyeSimulasyonu.Api.Entities.RebirthVote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .IsUnicode(false)
+                        .HasColumnType("char(2)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("VoterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CountryCode");
+
+                    b.HasIndex("VoterId")
+                        .IsUnique();
+
+                    b.ToTable("RebirthVotes");
+                });
+
             modelBuilder.Entity("TurkiyeSimulasyonu.Api.Entities.Comment", b =>
                 {
                     b.HasOne("TurkiyeSimulasyonu.Api.Entities.Item", "Item")
