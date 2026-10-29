@@ -14,7 +14,7 @@ Veri SQL Server'da, EF Core ile okunuyor ve yazılıyor: geliştirmede LocalDB, 
 
 Yeniden Doğma Anketi'nin oyları sunucuda, `RebirthVotes` tablosunda; frontend tarayıcı başına ürettiği anonim kimliği `X-Voter-Id` başlığıyla gönderiyor.
 
-Öğe oyları da sunucuda: ItemVotes tablosu + Items'taki ScoreNCount sayaçları, aynı anonim kimlikle.
+Öğe oyları da sunucuda: `ItemVotes` tablosu + `Items`'taki `ScoreNCount` sayaçları, aynı anonim kimlikle.
 
 ## Çalıştırma
 
@@ -118,6 +118,7 @@ dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connect
 | `GET /items/my-votes` | 200 + `[{ itemId, stars }]`; kimlik `X-Voter-Id` başlığında | hiç oy yok → 200 + `[]` · başlık yok ya da GUID değil → 400 |
 | `PUT /items/{id}/my-vote` | 200 + `{ itemId, stars }` (kanonik slug); ilk oy da değişiklik de 200 | `stars` 1-5 dışında ya da yok → 400 (`errors.Stars`) · olmayan öğe → 404 · başlık yok → 400 · IP başına dakikada 60'ı aşınca → 429 |
 | `DELETE /items/{id}/my-vote` | 204 (oy zaten yoksa da) | olmayan öğe → 404 · başlık yok → 400 · 429 aynı sınır |
+
 - Tanınmayan query parametreleri yok sayılır (ör. json-server'dan kalma `_sort`).
 - Desteklenmeyen metot → 405.
 
@@ -232,7 +233,7 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Tanınmayan alanlar yok sayılır (varsayılan).** Kalıpta `createdAt` alanı zaten bulunmadığından ve zorunlu alan doğrulaması yazım hatalarını 400 ile yakaladığından, eski frontend sekmelerinin göndereceği fazladan alanları reddetmek güvenlik kazancı sağlamadan kullanıcı deneyimini bozar.
 - Doğrulama: DataAnnotations CreateCommentRequest üzerinde; metin kırpıldıktan sonra kontrol edilir; boş author “anonim” olur.
 - Hatalar: AddProblemDetails + GlobalExceptionHandler + UseStatusCodePages; ayrıntı sadece logda.
-- Hız sınırı: IP başına dakikalık sabit pencere, aşılınca 429 + Retry-After. `POST /comments` 5,  PUT/DELETE /items/{id}/my-vote 60 (öğeler arasında gezip puan vermek sık bir iş).
+- Hız sınırı: IP başına dakikalık sabit pencere, aşılınca 429 + Retry-After. `POST /comments` 5, `PUT /surveys/rebirth/my-vote` 20 (listede gezinip fikir değiştirmek doğal), `PUT`/`DELETE /items/{id}/my-vote` 60 (öğeler arasında gezip puan vermek sık bir iş). Her politika kendi sayacını tutuyor.
 
 ## Bilinçli borçlar
 
