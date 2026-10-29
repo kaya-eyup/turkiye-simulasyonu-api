@@ -78,6 +78,8 @@ Eşleştirme anahtarı `Slug`: slug veritabanında yoksa eklenir, varsa
 `--update` ile bile hiçbir zaman güncellenmez — canlıda gerçek oy almış
 olabilir).
 
+Yeni öğe **0 oyla** girer: dosyadaki `distribution` yok sayılır (eski parti dosyaları yeniden yüklenirken sahte oy geri gelmesin diye uyarıyla). `createdAt` verilmezse içe aktarma anı yazılır. `featured`, `search`, `my-votes` slug olarak reddedilir.
+
 ```powershell
 # local (varsayılan bağlantı: LocalDB)
 dotnet run --project TurkiyeSimulasyonu.Importer -- --dry-run <klasör>
@@ -88,7 +90,7 @@ dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connect
 dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" <klasör>
 ```
 
-Parti dosyası formatı: `{ "category": {id,name,emoji,order}?, "items": [...] }`.
+Parti dosyası formatı: `{ "category": {id,name,emoji,order}?, "items": [{id,categoryId,name,emoji,summary}] }`.
 `"category"` sadece yeni bir kategori açılıyorsa var; mevcut kategoriye öğe
 eklerken yok. Bozuk bir dosya `SaveChanges()` öncesi `json.loads`/deserialize
 aşamasında patlar — tek transaction olduğu için ya hepsi yazılır ya hiçbiri.
@@ -98,6 +100,17 @@ Bakım komutu — `--backfill-search`: Var olan bütün öğelerin `SearchText`'
 dotnet run --project TurkiyeSimulasyonu.Importer -- --backfill-search --dry-run
 dotnet run --project TurkiyeSimulasyonu.Importer -- --backfill-search
 dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" --backfill-search
+
+Bakım komutu — `--recount-votes`: `Score1Count`…`Score5Count` sayaçlarını `ItemVotes`'tan yeniden kurar. Gerçek oylar bire bir korunur; tabloda karşılığı olmayan (seed'den kalma sahte) pay silinir. Dosya almaz.
+
+- Gerçek çalıştırma, değiştirmeden önce bütün sayaçların dökümünü `backups/scores-<tarih>.json`'a yazar (depoya girmez). Dosya yazılamazsa hiçbir şey değişmez.
+- Sayım SERIALIZABLE transaction'da ve `ItemVotes`'a tablo kilidiyle yapılır: o anda gelen oy birkaç milisaniye bekler, kaybolmaz. Kilit sırası oy yazma yoluyla aynı (önce `ItemVotes`, sonra `Items`).
+- Değişmez kural kontrolü: Sayaç toplamı `ItemVotes`'taki satır sayısına eşit değilse transaction geri alınır.
+- `--dry-run` aynı `UPDATE`'i çalıştırıp geri alır. Gerçek çalıştırmadan sonraki `--dry-run`'da `Sayacı değişen öğe: 0` görmek, sayaçla oy tablosunun tutarlı olduğunun kontrolüdür.
+
+dotnet run --project TurkiyeSimulasyonu.Importer -- --recount-votes --dry-run
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" --recount-votes --dry-run
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" --recount-votes
 
 ## Uçlar
 
@@ -185,7 +198,8 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 
 ## Öğe oyları
 
-- **Anketin tersine sayaç var.** Dağılım her liste sayfasında okunuyor (1224 öğeye kadar) ve öğelerin seed'den gelen başlangıç dağılımı sadece `ScoreNCount` sütunlarında; `ItemVotes`'u saymak başlangıç sayılarını kaybederdi. Çok okunan sayı yazarken bir kez hesaplanıyor.
+- **Anketin tersine sayaç var.** Dağılım her liste sayfasında okunuyor (1224 öğeye kadar); çok okunan sayı her okumada `GROUP BY` ile sayılmıyor, yazarken bir kez hesaplanıyor.
+- **Gerçek oyların kaynağı `ItemVotes`, sayaçlar onun özeti.** Seed'in sahte başlangıç dağılımı `--recount-votes` ile silindi; yeni öğeler 0 oyla giriyor. Sayaçlar her an `ItemVotes`'tan yeniden kurulabilir.
 - **Oy satırı ve sayaç aynı transaction'da.** Ya ikisi birden yazılır ya hiçbiri.
 - **Oy değişikliği karşılaştır-ve-değiştir ile:** `UPDATE … SET Stars = @new WHERE … AND Stars = @old`. Arada başka bir istek oyu değiştirdiyse 0 satır etkilenir ve işlem baştan okunarak tekrar denenir (en fazla 5 kez). Koşul olmasa iki eşzamanlı değişiklik yanlış sütunu azaltır, dağılım sessizce bozulurdu. Entegrasyon testi aynı kimlikten aynı anda 5 farklı puan gönderip tek oy sayıldığını kontrol ediyor.
 - **Sayaçlar okunmadan kaydırılıyor:** `SET Score4Count = Score4Count + 1` tek komut; satır kilidi aynı öğeye gelen oyları sıraya sokuyor. Bütün yollar kilitleri aynı sırayla alıyor (önce `ItemVotes`, sonra `Items`); kilitlenme oluşmuyor.
@@ -249,4 +263,5 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - Arama sonuçları alaka düzeyine göre değil `Id` sırasına göre dönüyor.
 - `featured` dolgusu bütün aday id'leri belleğe çekip orada karıştırıyor. 1224 kayıtta bedeli yok; tablo büyürse karıştırma SQL'e taşınmalı. `ORDER BY NEWID()` her istekte farklı sonuç verip haftalık sabitliği bozacağı için tohumdan türetilen bir sıralama gerekir (ör. `ORDER BY CHECKSUM(Id, @seed)`).
 - `GetFeaturedAsync`, sistem saatini (`DateTimeOffset.UtcNow`) doğrudan okuyor; bu, hafta geçişi davranışını otomatik testle doğrulamayı zorlaştırıyor. Gerçek bir üründe `TimeProvider` DI ile enjekte edilip sahte bir saatle test edilirdi.
-- Sayaçlar = seed'in sahte dağılımı + gerçek oylar; seed'in payı ayrı tutulmadığı için sayaçlar `ItemVotes`'tan yeniden hesaplanamıyor. Bir hata sayacı bozarsa düzeltecek kaynak yok. Gerçek üründe başlangıç payı ayrı sütunda tutulur (ya da hiç sahte veri olmaz) ve bir kontrol sorgusu sayacı oy tablosuyla karşılaştırır.
+- Sayaç ile `ItemVotes` arasındaki tutarlılık kontrolü elle (`--recount-votes --dry-run`); düzenli çalışan bir iş ya da alarm yok.
+- Yerel seed (`db.json`) hâlâ sahte dağılım taşıyor; sadece geliştirme ve testler için. Yerelde de silmek için `--recount-votes`.
