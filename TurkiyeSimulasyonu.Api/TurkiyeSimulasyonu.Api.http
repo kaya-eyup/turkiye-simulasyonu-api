@@ -26,7 +26,7 @@ GET {{HostAddress}}/items/KEBAP
 GET {{HostAddress}}/items?categoryId=yemek-kulturu
 Accept: application/json
 
-### Doğru istek → 200 + 24 öğe (frontend'in arama sayfası bunu kullanıyor)
+### Doğru istek → 200 + bütün öğeler, Id sırasıyla (sayfasız; arama artık /items/search'te)
 GET {{HostAddress}}/items
 Accept: application/json
 
@@ -146,7 +146,7 @@ Content-Type: application/json
 
 { "itemId": "baklava", "author": "   ", "body": "Harika bir lezzet." }
 
-### Doğru istek → 200 + en fazla 4 öğe; son 7 günün yorum sayısına göre çoktan aza, eşitse slug
+### Doğru istek → 200 + her zaman 5 öğe; bu takvim haftası yorum almışlardan haftalık sabit seçki, eksikse rastgele dolgu
 GET {{HostAddress}}/items/featured
 Accept: application/json
 
