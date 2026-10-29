@@ -14,6 +14,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<Item> Items { get; set; }
     public DbSet<Comment> Comments { get; set; }
+    public DbSet<RebirthVote> RebirthVotes { get; set; }
 
     // Veritabanı kuralları tek yerde: uzunluk, tekillik, ilişki, silme davranışı
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -55,6 +56,18 @@ public sealed class AppDbContext : DbContext
                    .WithMany(i => i.Comments)
                    .HasForeignKey(co => co.ItemId)
                    .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RebirthVote>(vote =>
+        {
+            // Tarayıcı başına tek oy: ikinci satırı kod değil bu index engeller (aynı anda gelen isteklerde de)
+            vote.HasIndex(v => v.VoterId).IsUnique();
+
+            // Hep 2 harf, hep ASCII → char(2): 2 bayt (nvarchar(2) 6 bayt tutardı)
+            vote.Property(v => v.CountryCode).HasMaxLength(2).IsFixedLength().IsUnicode(false);
+
+            // GROUP BY CountryCode bütün tabloyu değil bu dar index'i sırayla okur
+            vote.HasIndex(v => v.CountryCode);
         });
     }
 
