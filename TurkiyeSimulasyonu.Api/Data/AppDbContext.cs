@@ -15,6 +15,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<Item> Items { get; set; }
     public DbSet<Comment> Comments { get; set; }
     public DbSet<RebirthVote> RebirthVotes { get; set; }
+    public DbSet<ItemVote> ItemVotes { get; set; }
 
     // Veritabanı kuralları tek yerde: uzunluk, tekillik, ilişki, silme davranışı
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -68,6 +69,23 @@ public sealed class AppDbContext : DbContext
 
             // GROUP BY CountryCode bütün tabloyu değil bu dar index'i sırayla okur
             vote.HasIndex(v => v.CountryCode);
+        });
+
+        modelBuilder.Entity<ItemVote>(vote =>
+        {
+            // Tarayıcı başına öğe başına tek oy; ikinci satırı kod değil bu index engeller.
+            // Sütun sırası bilinçli: VoterId önde, çünkü "bu tarayıcının bütün oyları"
+            // (WHERE VoterId = @id) da aynı index'i kullanabilir. Tersi olsaydı kullanamazdı.
+            vote.HasIndex(v => new { v.VoterId, v.ItemId }).IsUnique();
+
+            // Son savunma hattı: kod bir gün 6 yazmaya kalksa veritabanı reddeder
+            vote.ToTable(t => t.HasCheckConstraint("CK_ItemVotes_Stars", "[Stars] BETWEEN 1 AND 5"));
+
+            // Öğe silinirse oyları da gider (yorumlarla aynı kural)
+            vote.HasOne(v => v.Item)
+                .WithMany()
+                .HasForeignKey(v => v.ItemId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 
