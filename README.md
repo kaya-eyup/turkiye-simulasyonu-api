@@ -60,6 +60,7 @@ React (Cloudflare · yedek: Vercel) ──HTTPS──▶ API (MonsterASP: Window
   dotnet ef migrations list --connection $cs   # bekleyenler (Pending) işaretli
   dotnet ef database update --connection $cs
   ```
+- **Her Web Deploy'dan önce** `dotnet ef migrations list --connection $cs`: Listede `(Pending)` kalmışsa önce `database update`. Kod, canlıda olmayan bir sütunu sorgularsa o uç 500 döner (28 Ekim'de `SearchText` migration'ı canlıya uygulanmadan yayın yapıldı; 29 Ekim'de fark edilene kadar canlıda arama 500 verdi).
 - **Cold start:** Ücretsiz sunucu boştaki uygulamayı durduruyor; sonraki ilk istek uygulamayı yeniden başlattığı için yavaş.
 - **HTTPS:** Let's Encrypt sertifikası; `http` istekleri `https`'e yönlendiriliyor.
 
@@ -181,7 +182,7 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Arama `/items`'ta değil `/items/search`'te.** `/items?categoryId=` kategori sayfası için sayfalanmamış tam listeyi dönüyor. Aynı uçtan bazen dizi bazen `{ items, total, totalPages }` dönmesi, istemcide union, belge sayfasında ise anlatılamayan bir uç demekti. Arama kendi ucunda; `featured` ile aynı desen.
 - **Sayfalama veritabanında.** Toplam `COUNT(*)` ile, sayfa `OFFSET … FETCH NEXT` ile alınır (EF'te `Skip`/`Take`). İki sorgu atılır: sayfa sayısını bilmek için toplam gerekir, toplamı öğrenmek için bütün satırları çekmek gerekmez. Sayfa boyutu 12.
 - **`featured` gerçek takvim haftasına göre sabit, "son 7 gün" kayan pencereye göre değil.** Havuz, bu ISO haftasının Pazartesi'sinden bugüne yorum almış öğelerden oluşuyor. Seçim, haftanın yıl+numarasından türetilen sabit bir tohumla karıştırılıyor; bu yüzden aynı hafta içindeki her istek aynı 5 öğeyi döndürüyor (sayfa yenilemede değişmiyor), hafta değişince otomatik olarak yeni bir seçki çıkıyor. Haftanın başında havuz küçük/boş olabilir — bu beklenen bir durum, henüz o hafta az şey konuşulmuş demektir.
-- **Rastgele seçim bellekte.** SQL Server'da rastgele sıralamanın yolu `ORDER BY NEWID()`; `EF.Functions.Random()` ise `RAND()`'a çevrilir ve `RAND()` sorgu başına tek değer ürettiği için hiç karıştırmaz. Aday id'ler çekilip `Random.Shared.Shuffle` (Fisher-Yates) ile karıştırılıyor.
+- **Rastgele seçim bellekte.** SQL Server'da rastgele sıralamanın yolu `ORDER BY NEWID()`; `EF.Functions.Random()` ise `RAND()`'a çevrilir ve `RAND()` sorgu başına tek değer ürettiği için hiç karıştırmaz. Aday id’ler çekilip haftanın yıl+numarasından tohumlanan new Random(seed).Shuffle (Fisher-Yates) ile karıştırılıyor; aynı tohum aynı sırayı verdiği için seçki hafta boyunca sabit.
 
 ## CORS
 
@@ -219,12 +220,11 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - Anket sonuçları her istekte yeniden sayılıyor. Binlerce oyda milisaniyeler; milyonlarca oyda önbellek ya da ayrı bir özet tablo gerekir.
 - `/items` ve yorum listesi sayfasız.
 - Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
-- `featured ve search` ayrılmış kelimeler: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
+- `featured` ve `search` ayrılmış kelimeler: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
 - Canlı veritabanına dışarıdan bağlanırken sunucu sertifikası doğrulanmıyor (`TrustServerCertificate=True`): Bağlantı şifreli, ama karşı tarafın kimliği kanıtlanmıyor. Ücretsiz katmanın sertifikası herkesin güvendiği bir otoriteden değil.
 - Yayın ve tablo değişiklikleri canlıya elle uygulanıyor; push'ta otomatik yayın yok.
 - Ücretsiz katmanda veritabanının otomatik yedeği yok.
 - `SearchText`'te index yok. Arama `LIKE '%…%'` ile yapılıyor ve bu kalıp baştan eşleşmediği için B-tree index kullanılamaz; işe yaramayacak bir index sadece her yazmayı yavaşlatırdı. 1224 kayıtta tam tablo taraması kabul edilebilir. Gerçek çözüm full-text search, Blok H'de.
 - Arama sonuçları alaka düzeyine göre değil `Id` sırasına göre dönüyor.
-- `featured` dolgusu bütün aday id'leri belleğe çekip orada karıştırıyor. 1224 kayıtta bedeli yok; tablo büyürse `ORDER BY NEWID()` ya da `TABLESAMPLE` gerekir.
-- Dolgu her istekte yeniden seçiliyor; "haftanın" seçilmişleri her sayfa yenilemede değişebilir.
+- `featured` dolgusu bütün aday id'leri belleğe çekip orada karıştırıyor. 1224 kayıtta bedeli yok; tablo büyürse karıştırma SQL'e taşınmalı. `ORDER BY NEWID()` her istekte farklı sonuç verip haftalık sabitliği bozacağı için tohumdan türetilen bir sıralama gerekir (ör. `ORDER BY CHECKSUM(Id, @seed)`).
 - `GetFeaturedAsync`, sistem saatini (`DateTimeOffset.UtcNow`) doğrudan okuyor; bu, hafta geçişi davranışını otomatik testle doğrulamayı zorlaştırıyor. Gerçek bir üründe `TimeProvider` DI ile enjekte edilip sahte bir saatle test edilirdi.
