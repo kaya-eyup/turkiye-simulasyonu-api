@@ -10,10 +10,6 @@ namespace TurkiyeSimulasyonu.Api.Controllers;
 [Route("surveys/rebirth")]
 public class SurveysController : ControllerBase
 {
-    // v1'de giriş yok: tarayıcı kendi ürettiği kimliği bu başlıkla gönderir.
-    // Giriş gelince yerini Authorization başlığı alır; gövde ({ country }) değişmez.
-    public const string VoterIdHeader = "X-Voter-Id";
-
     private readonly IRebirthSurveyService _surveyService;
 
     public SurveysController(IRebirthSurveyService surveyService)
@@ -30,7 +26,7 @@ public class SurveysController : ControllerBase
 
     [HttpGet("my-vote")]
     public async Task<ActionResult<RebirthVoteDto>> GetMyVote(
-        [FromHeader(Name = VoterIdHeader)] Guid? voterId,
+        [FromHeader(Name = VoterIdHeader.Name)] Guid? voterId,
         CancellationToken cancellationToken)
     {
         // GUID olmayan değer ("abc") buraya gelmeden 400 olur; başlığın hiç olmaması null gelir
@@ -53,7 +49,7 @@ public class SurveysController : ControllerBase
     [HttpPut("my-vote")]
     [EnableRateLimiting(RateLimitPolicies.SurveyWrite)]
     public async Task<ActionResult<RebirthVoteDto>> PutMyVote(
-        [FromHeader(Name = VoterIdHeader)] Guid? voterId,
+        [FromHeader(Name = VoterIdHeader.Name)] Guid? voterId,
         PutRebirthVoteRequest request,
         CancellationToken cancellationToken)
     {
@@ -69,7 +65,7 @@ public class SurveysController : ControllerBase
 
     private ActionResult MissingVoterId()
     {
-        ModelState.AddModelError(VoterIdHeader, "Header is required.");
+        ModelState.AddModelError(VoterIdHeader.Name, "Header is required.");
         return ValidationProblem(ModelState);
     }
 }

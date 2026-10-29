@@ -1,8 +1,8 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Dtos;
 using TurkiyeSimulasyonu.Api.Entities;
+using TurkiyeSimulasyonu.Api.Infrastructure;
 
 namespace TurkiyeSimulasyonu.Api.Services;
 
@@ -70,7 +70,7 @@ public sealed class RebirthSurveyService : IRebirthSurveyService
         {
             await _db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        catch (DbUpdateException ex) when (SqlErrors.IsUniqueViolation(ex))
         {
             // 3. Yarış: 1 ile 2 arasında aynı kimlikten başka bir istek satırı ekledi.
             // Başarısız INSERT'in nesnesi hâlâ "eklenecek" işaretli; temizlenmezse
@@ -99,7 +99,5 @@ public sealed class RebirthSurveyService : IRebirthSurveyService
         return affected > 0;
     }
 
-    // 2601: tekil index'e çift kayıt · 2627: tekil kısıt ya da birincil anahtar ihlali
-    private static bool IsUniqueViolation(DbUpdateException ex) =>
-        ex.InnerException is SqlException { Number: 2601 or 2627 };
+
 }
