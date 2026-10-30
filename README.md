@@ -316,11 +316,11 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 
 ## Bilinçli borçlar
 
-- Anket kimliği anonim: Tarayıcı verisini silen ya da başlığa yeni bir GUID yazan biri tekrar oy verebilir. İstek sınırı bunu yavaşlatıyor ama durdurmuyor. Giriş geldiğinde oy kullanıcıya bağlanacak.
+- Oy kimliği (anket ve öğe oyları) anonim: Tarayıcı verisini silen ya da başlığa yeni bir GUID yazan biri tekrar oy verebilir. İstek sınırı bunu yavaşlatıyor ama durdurmuyor. Giriş geldiğinde oy kullanıcıya bağlanacak.
 - Anket sonuçları her istekte yeniden sayılıyor. Binlerce oyda milisaniyeler; milyonlarca oyda önbellek ya da ayrı bir özet tablo gerekir.
 - `/items` ve yorum listesi sayfasız.
 - Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
-- Slug kontrolü (biçim + `featured`/`search`/`my-votes` ayrılmış kelimeleri) yalnızca Importer'da; veritabanında karşılığı bir `CHECK` kısıtı yok. Elle SQL ile ya da başka bir yoldan girilen slug kontrol edilmez. Bu hafta `ı` harfli bir slug böyle girip canlıda kategori sayfasını düşürdü (frontend `slugSchema`'sı reddetti, bütün liste düştü). Kalıcı çözüm `CHECK` kısıtı ya da API'de yazma anında doğrulama.
+- Slug kontrolü (biçim + `featured`/`search`/`my-votes` ayrılmış kelimeleri) yalnızca Importer'da; veritabanında karşılığı bir `CHECK` kısıtı yok. Elle SQL ile ya da başka bir yoldan girilen slug kontrol edilmez ([Canımı yakan yerler](#canımı-yakan-yerler), madde 2). Canlıda kural dışı slug yok (30 Ekim'de sorguyla kontrol edildi), ama bunu tutan bir kısıt da yok. Kalıcı çözüm `CHECK` kısıtı ya da API'de yazma anında doğrulama.
 - Canlı veritabanına dışarıdan bağlanırken sunucu sertifikası doğrulanmıyor (`TrustServerCertificate=True`): Bağlantı şifreli, ama karşı tarafın kimliği kanıtlanmıyor. Ücretsiz katmanın sertifikası herkesin güvendiği bir otoriteden değil.
 - Yayın ve tablo değişiklikleri canlıya elle uygulanıyor; push'ta otomatik yayın yok.
 - Ücretsiz katmanda veritabanının otomatik yedeği yok.
@@ -328,5 +328,11 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - Arama sonuçları alaka düzeyine göre değil `Id` sırasına göre dönüyor.
 - `featured` dolgusu bütün aday id'leri belleğe çekip orada karıştırıyor. 1224 kayıtta bedeli yok; tablo büyürse karıştırma SQL'e taşınmalı. `ORDER BY NEWID()` her istekte farklı sonuç verip haftalık sabitliği bozacağı için tohumdan türetilen bir sıralama gerekir (ör. `ORDER BY CHECKSUM(Id, @seed)`).
 - `GetFeaturedAsync`, sistem saatini (`DateTimeOffset.UtcNow`) doğrudan okuyor; bu, hafta geçişi davranışını otomatik testle doğrulamayı zorlaştırıyor. Gerçek bir üründe `TimeProvider` DI ile enjekte edilip sahte bir saatle test edilirdi.
-- Sayaç ile `ItemVotes` arasındaki tutarlılık kontrolü elle (`--recount-votes --dry-run`); düzenli çalışan bir iş ya da alarm yok.
-- Yerel seed (`db.json`) hâlâ sahte dağılım taşıyor; sadece geliştirme ve testler için. Yerelde de silmek için `--recount-votes`.
+- Sayaçlar (`Score1Count`…`Score5Count`) başlangıçta seed'in sahte dağılımı ile gerçek oyların toplamıydı. Canlıda sahte pay `--recount-votes` ile silindi: sayaçlar artık yalnızca `ItemVotes`'un özeti ve 30 Ekim'de canlıda `--recount-votes --dry-run` `Sayacı değişen öğe: 0` verdi (sayaçla oy tablosu tutarlı). Kalan iki borç:
+  - Yerel seed (`db.json`) hâlâ sahte dağılım taşıyor; sadece geliştirme ve testler için. Yerelde de silmek için `--recount-votes`.
+  - Tutarlılık kontrolü elle; düzenli çalışan bir iş ya da alarm yok.
+- Swagger UI ve `/openapi/v1.json` production'da açık ve "Try it out" canlı veritabanına yazıyor. Yazma uçları istek sınırlı ama sayfadan atılan istek gerçek veri olur. Giriş gelince ya da API iç kullanıma dönerse ortama ya da yetkiye bağlanmalı ([Kararlar](#belge-sayfası-openapi-ve-swagger-ui)).
+- `CS1591` ve `CS1573` uyarıları bilerek kapalı: eksik XML yorumunu derleyici yakalamıyor.
+- Importer'ın otomatik testi yok; slug kontrolü `--dry-run` ile elle denendi.
+- CI'daki SQL Server `2022-latest`, canlıdaki SQL Server 2025: aynı motor ailesi, ama sürümler eşit değil.
+- CI'daki `actions/checkout@v4` ve `actions/setup-dotnet@v4` Node 20 uyarısı veriyor (GitHub bunları şimdilik Node 24'e zorluyor); güncel sürümlere geçilecek.
