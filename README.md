@@ -78,7 +78,7 @@ Eşleştirme anahtarı `Slug`: slug veritabanında yoksa eklenir, varsa
 `--update` ile bile hiçbir zaman güncellenmez — canlıda gerçek oy almış
 olabilir).
 
-Yeni öğe **0 oyla** girer: dosyadaki `distribution` yok sayılır (eski parti dosyaları yeniden yüklenirken sahte oy geri gelmesin diye uyarıyla). `createdAt` verilmezse içe aktarma anı yazılır. `featured`, `search`, `my-votes` slug olarak reddedilir.
+Yeni öğe **0 oyla** girer: dosyadaki `distribution` yok sayılır (eski parti dosyaları yeniden yüklenirken sahte oy geri gelmesin diye uyarıyla). `createdAt` verilmezse içe aktarma anı yazılır. Slug biçimi frontend'in kuralıyla aynı olmalı: küçük `a-z`, `0-9` ve tek tirelerle ayrılmış parçalar (`^[a-z0-9]+(-[a-z0-9]+)*$`). Büyük harf, Türkçe harf (`ı`, `ş`…), boşluk ya da çift tire içeren slug `InvalidDataException` ile reddedilir; kategori slug'ı da aynı kuraldan geçer. `featured`, `search`, `my-votes` da slug olarak reddedilir. Kontrol dosya okunurken, `SaveChanges()` öncesi yapılır; hata bütün çalıştırmayı durdurur ve hiçbir şey yazılmaz.
 
 ```powershell
 # local (varsayılan bağlantı: LocalDB)
@@ -255,7 +255,7 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - Anket sonuçları her istekte yeniden sayılıyor. Binlerce oyda milisaniyeler; milyonlarca oyda önbellek ya da ayrı bir özet tablo gerekir.
 - `/items` ve yorum listesi sayfasız.
 - Seed tablo seviyesinde kontrol ediyor ve sadece senkron.
-- `featured`, `search` ve `my-votes` ayrılmış kelimeler: Bu slug'la bir öğe açılırsa kendi adresinden erişilemez; slug kontrolü yok.
+- Slug kontrolü (biçim + `featured`/`search`/`my-votes` ayrılmış kelimeleri) yalnızca Importer'da; veritabanında karşılığı bir `CHECK` kısıtı yok. Elle SQL ile ya da başka bir yoldan girilen slug kontrol edilmez. Bu hafta `ı` harfli bir slug böyle girip canlıda kategori sayfasını düşürdü (frontend `slugSchema`'sı reddetti, bütün liste düştü). Kalıcı çözüm `CHECK` kısıtı ya da API'de yazma anında doğrulama.
 - Canlı veritabanına dışarıdan bağlanırken sunucu sertifikası doğrulanmıyor (`TrustServerCertificate=True`): Bağlantı şifreli, ama karşı tarafın kimliği kanıtlanmıyor. Ücretsiz katmanın sertifikası herkesin güvendiği bir otoriteden değil.
 - Yayın ve tablo değişiklikleri canlıya elle uygulanıyor; push'ta otomatik yayın yok.
 - Ücretsiz katmanda veritabanının otomatik yedeği yok.
