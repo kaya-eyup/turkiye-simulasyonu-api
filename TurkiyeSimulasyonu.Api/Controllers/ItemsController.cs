@@ -30,6 +30,8 @@ public class ItemsController : ControllerBase
         return Ok(featuredItems);
     }
 
+    [ProducesResponseType<SearchResultDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [HttpGet("search")]
     public async Task<ActionResult<SearchResultDto>> Search(
     [StringLength(100)] string? q,
@@ -40,6 +42,8 @@ public class ItemsController : ControllerBase
         return Ok(result);
     }
 
+    [ProducesResponseType<ItemDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [HttpGet("{id}")]
     public async Task<ActionResult<ItemDto>> GetById(string id, CancellationToken cancellationToken)
     {

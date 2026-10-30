@@ -20,6 +20,8 @@ public class ItemVotesController : ControllerBase
 
     // "my-votes" sabit bir parça: yönlendirme sabit parçayı {id}'den önce dener,
     // bu yüzden bu istek ItemsController'daki GET /items/{id}'ye düşmez
+    [ProducesResponseType<List<ItemVoteDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [HttpGet("my-votes")]
     public async Task<ActionResult<List<ItemVoteDto>>> GetMyVotes(
         [FromHeader(Name = VoterIdHeader.Name)] Guid? voterId,
@@ -35,6 +37,9 @@ public class ItemVotesController : ControllerBase
         return Ok(votes);
     }
 
+    [ProducesResponseType<ItemVoteDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [HttpPut("{id}/my-vote")]
     [EnableRateLimiting(RateLimitPolicies.ItemVotesWrite)]
     public async Task<ActionResult<ItemVoteDto>> PutMyVote(
@@ -58,6 +63,9 @@ public class ItemVotesController : ControllerBase
         return Ok(vote);
     }
 
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [HttpDelete("{id}/my-vote")]
     [EnableRateLimiting(RateLimitPolicies.ItemVotesWrite)]
     public async Task<IActionResult> DeleteMyVote(

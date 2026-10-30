@@ -17,6 +17,8 @@ public class CommentsController : ControllerBase
         _commentService = commentService;
     }
 
+    [ProducesResponseType<List<CommentDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [HttpGet]
     public async Task<ActionResult<List<CommentDto>>> GetByItem(string itemId, CancellationToken cancellationToken)
     {
@@ -24,6 +26,8 @@ public class CommentsController : ControllerBase
         return Ok(result);
     }
 
+    [ProducesResponseType<CommentDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [HttpPost]
     [EnableRateLimiting(RateLimitPolicies.CommentsWrite)]
     public async Task<ActionResult<CommentDto>> Create(
