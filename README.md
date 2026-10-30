@@ -2,19 +2,44 @@
 
 [![CI](https://github.com/kaya-eyup/turkiye-simulasyonu-api/actions/workflows/ci.yml/badge.svg)](https://github.com/kaya-eyup/turkiye-simulasyonu-api/actions/workflows/ci.yml)
 
-[Türkiye Simülasyonu](https://github.com/kaya-eyup/turkiye-simulasyonu-web)'nun backend'i. ASP.NET Core Web API (.NET 10, controller tabanlı).
+[Türkiye Simülasyonu](https://github.com/kaya-eyup/turkiye-simulasyonu-web)'nun backend'i. ASP.NET Core Web API (.NET 10, controller tabanlı), EF Core + SQL Server.
 
-Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu. API bu tablonun bir kısmını karşılıyor: hangi uçların hazır, hangilerinin henüz yok olduğu tablonun **Durum** sütununda ve aşağıdaki [Bilinçli borçlar](#bilinçli-borçlar) bölümünde.
+Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu; API bu tablonun hepsini karşılıyor. Tek fark: oylar kullanıcı girişi yerine anonim tarayıcı kimliğiyle çalışıyor ([Bilinçli borçlar](#bilinçli-borçlar)).
 
-## Durum
+[Canlı ve belge](#canlı-ve-belge) · [Mimari](#mimari) · [Çalıştırma](#çalıştırma) · [Canlı ortam ve yayın](#canlı-ortam-ve-yayın) · [Importer](#toplu-veri-ekleme-importer) · [Uçlar](#uçlar) · [Veri modeli](#veri-modeli) · [Kararlar](#kararlar) · [Bilinçli borçlar](#bilinçli-borçlar)
 
-**Canlı:** https://turkiye-simulasyonu-api.runasp.net (ör. [`/categories`](https://turkiye-simulasyonu-api.runasp.net/categories)). Frontend ([https://turkiyesimulasyonu.eyupkaya.com](https://turkiyesimulasyonu.eyupkaya.com), Cloudflare; yedek: [Vercel](https://turkiye-simulasyonu-web.vercel.app)) bu API'ye bağlı.
+## Canlı ve belge
 
-Veri SQL Server'da, EF Core ile okunuyor ve yazılıyor: geliştirmede LocalDB, canlıda MonsterASP. React'teki yorum formu `POST /comments`'e yazıyor. Uçlar DTO döndürüyor. Sorgular servis sınıflarında, controller’lar sadece HTTP’yi karşılıyor.
+- **API:** https://turkiye-simulasyonu-api.runasp.net
+- **Belge (Swagger UI):** [/swagger](https://turkiye-simulasyonu-api.runasp.net/swagger). Kök adres de buraya yönlenir. Ham OpenAPI dosyası: [/openapi/v1.json](https://turkiye-simulasyonu-api.runasp.net/openapi/v1.json).
+- **Frontend:** https://turkiyesimulasyonu.eyupkaya.com (Cloudflare; yedek: [Vercel](https://turkiye-simulasyonu-web.vercel.app)).
 
-Yeniden Doğma Anketi'nin oyları sunucuda, `RebirthVotes` tablosunda; frontend tarayıcı başına ürettiği anonim kimliği `X-Voter-Id` başlığıyla gönderiyor.
+Veri SQL Server'da, EF Core ile okunuyor ve yazılıyor: geliştirmede LocalDB, canlıda MonsterASP. Uçlar DTO döndürüyor. Sorgular servis sınıflarında, controller'lar sadece HTTP'yi karşılıyor.
 
-Öğe oyları da sunucuda: `ItemVotes` tablosu + `Items`'taki `ScoreNCount` sayaçları, aynı anonim kimlikle.
+Yeniden Doğma Anketi'nin oyları sunucuda (`RebirthVotes`); öğe oyları da sunucuda (`ItemVotes` tablosu + `Items`'taki `ScoreNCount` sayaçları). İkisi de giriş yerine aynı anonim tarayıcı kimliğiyle çalışıyor: frontend ürettiği kimliği `X-Voter-Id` başlığıyla gönderiyor.
+
+## Mimari
+
+```
+React (Cloudflare · yedek: Vercel) ──HTTPS──▶ API (MonsterASP: Windows + IIS, .NET 10) ──iç ağ──▶ SQL Server 2025 (MonsterASP)
+```
+
+Katmanlar: Controller → Service (`IXxxService` / `XxxService`) → AppDbContext → SQL Server
+
+- **Controller HTTP’yi karşılıyor:** Parametreyi alıyor, servisten gelen sonucu HTTP cevabına çeviriyor: veri → 200 ya da 201; null → 404 (okuma uçları) ya da 400 (yorum ekleme).
+- **Servis sorguyu ve DTO’yu kuruyor:** HTTP bilmiyor.
+- **Scoped Servisler:** Servisler scoped, çünkü `AppDbContext` scoped. Ayrı bir repository katmanı yok: `DbSet` zaten repository’nin, `DbContext` de unit of work’ün işini yapıyor.
+
+İstek hattı (`Program.cs`'teki sıra; sıra bilerek böyle):
+
+```
+istek → UseExceptionHandler → UseStatusCodePages → UseHttpsRedirection → Swagger UI
+      → UseRouting → UseCors → UseRateLimiter → UseAuthorization → Controller
+```
+
+- **Hata yakalayıcı en dışta**, bütün katmanların hatasını ProblemDetails'e çeviriyor; ayrıntı yalnızca logda kalıyor.
+- **`UseRouting` açıkça yazılı:** uç-bazlı istek sınırı (`[EnableRateLimiting]`) hangi uca gidildiğini bilmek zorunda.
+- **`UseCors`, `UseRateLimiter`'dan önce:** 429 cevabı da CORS başlığını taşır; yoksa tarayıcı 429'u JavaScript'e vermez.
 
 ## Çalıştırma
 
@@ -25,7 +50,7 @@ Yeniden Doğma Anketi'nin oyları sunucuda, `RebirthVotes` tablosunda; frontend 
 ### İlk Kurulum ve Çalıştırma
 1. Proje klasöründe (TurkiyeSimulasyonu.Api/) `dotnet ef database update` çalıştır. Bu komut tabloları kurar ve seed’i çalıştırır. (Veritabanını sıfırlamak için: `dotnet ef database drop --force` + `dotnet ef database update`.)
 2. Visual Studio'da `https` profiliyle F5 (ya da `dotnet run --launch-profile https`).
-3. API `https://localhost:7129` adresinde açılır. `http://localhost:5267`'ye gelen istekler https'e yönlendirilir.
+3. API `https://localhost:7129` adresinde açılır. `http://localhost:5267`'ye gelen istekler https'e yönlendirilir. Belge sayfası `https://localhost:7129/swagger` (kök adres de oraya yönlenir).
 4. İstekler `TurkiyeSimulasyonu.Api/TurkiyeSimulasyonu.Api.http` dosyasında: her uç için bir doğru istek ve bilerek bozulmuş istekler, başlıklarında beklenen sonuçla. Adres `http-client.env.json`'dan gelir: editörün sağ üstündeki ortam seçiciden `local` ya da `production` seçilir. Canlıda veri yazan başarılı POST'lar gönderilmez.
 
 `dotnet run` profil belirtilmeden çalıştırılırsa `launchSettings.json`'daki ilk profil (`http`) seçilir ve 7129 açılmaz.
@@ -34,19 +59,11 @@ Yeniden Doğma Anketi'nin oyları sunucuda, `RebirthVotes` tablosunda; frontend 
 
 `dotnet test` (çözüm kökünde). Entegrasyon testleri API'yi bellekte ayağa kaldırır ve gerçek bir SQL Server'a bağlanır: yerelde LocalDB'deki `TurkiyeSimulasyonu_Tests` (her çalışmada silinip migration + seed ile yeniden kurulur), CI'da GitHub Actions'ın yanında açtığı SQL Server konteyneri (`TEST_DB_CONNECTION` ortam değişkeni). SQLite ya da bellek içi veritabanı kullanılmıyor: `KEBAP → 200` davranışı SQL Server'ın harf duyarsız karşılaştırmasından geliyor.
 
-## Mimari
+OpenAPI belgesi de sözleşmenin parçası olarak test ediliyor (`OpenApiTests`): belge servis ediliyor mu, yazma uçları 429'u ve `X-Voter-Id` zorunluluğunu belgeliyor mu, hatalar `application/problem+json` mu. Biri bir ucun `[EnableRateLimiting]` etiketini silerse test kırmızıya döner.
 
-Controller → Service (`IXxxService` / `XxxService`) → AppDbContext → SQL Server
+## Canlı ortam ve yayın
 
-- **Controller HTTP’yi karşılıyor:** Parametreyi alıyor, servisten gelen sonucu HTTP cevabına çeviriyor: veri → 200 ya da 201; null → 404 (okuma uçları) ya da 400 (yorum ekleme).
-- **Servis sorguyu ve DTO’yu kuruyor:** HTTP bilmiyor.
-- **Scoped Servisler:** Servisler scoped, çünkü `AppDbContext` scoped. Ayrı bir repository katmanı yok: `DbSet` zaten repository’nin, `DbContext` de unit of work’ün işini yapıyor.
-
-## Canlı ortam
-
-```
-React (Cloudflare · yedek: Vercel) ──HTTPS──▶ API (MonsterASP: Windows + IIS, .NET 10) ──iç ağ──▶ SQL Server 2025 (MonsterASP)
-```
+Genel şema [Mimari](#mimari) bölümünde.
 
 - **Yayın:** Visual Studio'dan Web Deploy ile, framework-dependent: Sunucuda .NET 10 kurulu, paket sadece uygulamanın dosyalarını taşıyor. Sunucuda pakette olmayan dosyalar silinir. Yayından önce çalışma ağacı temiz olmalı; sunucudaki kod her zaman bir commit'e karşılık gelir.
 - **Ayarlar:** Sunucu `Production` ortamında çalışıyor (`ASPNETCORE_ENVIRONMENT` tanımlı değil, varsayılan bu).
@@ -65,6 +82,7 @@ React (Cloudflare · yedek: Vercel) ──HTTPS──▶ API (MonsterASP: Window
 - **Her Web Deploy'dan önce** `dotnet ef migrations list --connection $cs`: Listede `(Pending)` kalmışsa önce `database update`. Kod, canlıda olmayan bir sütunu sorgularsa o uç 500 döner (28 Ekim'de `SearchText` migration'ı canlıya uygulanmadan yayın yapıldı; 29 Ekim'de fark edilene kadar canlıda arama 500 verdi).
 - **Cold start:** Ücretsiz sunucu boştaki uygulamayı durduruyor; sonraki ilk istek uygulamayı yeniden başlattığı için yavaş.
 - **HTTPS:** Let's Encrypt sertifikası; `http` istekleri `https`'e yönlendiriliyor.
+- **Belge sayfası:** `/swagger` ve `/openapi/v1.json` production'da da açık; gerekçesi [Kararlar](#belge-sayfası-openapi-ve-swagger-ui) bölümünde.
 
 ## Toplu veri ekleme (Importer)
 
@@ -85,21 +103,25 @@ Yeni öğe **0 oyla** girer: dosyadaki `distribution` yok sayılır (eski parti 
 dotnet run --project TurkiyeSimulasyonu.Importer -- --dry-run <klasör>
 dotnet run --project TurkiyeSimulasyonu.Importer -- <klasör>
 
-# production
-dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" --dry-run <klasör>
-dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" <klasör>
+# production: bağlantı dizesi Read-Host ile alınır (sohbete ve komut geçmişine yazılmaz).
+# Aşağıdaki `$cs` hep bu dizedir: dış adresin dizesi, bkz. Canlı ortam ve yayın.
+$cs = Read-Host "Remote connection string"
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection $cs --dry-run <klasör>
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection $cs <klasör>
 ```
 
 Parti dosyası formatı: `{ "category": {id,name,emoji,order}?, "items": [{id,categoryId,name,emoji,summary}] }`.
 `"category"` sadece yeni bir kategori açılıyorsa var; mevcut kategoriye öğe
-eklerken yok. Bozuk bir dosya `SaveChanges()` öncesi `json.loads`/deserialize
-aşamasında patlar — tek transaction olduğu için ya hepsi yazılır ya hiçbiri.
+eklerken yok. Bozuk bir dosya `SaveChanges()` öncesi JSON okunurken
+(deserialize aşamasında) patlar — tek transaction olduğu için ya hepsi yazılır ya hiçbiri.
 
 Bakım komutu — `--backfill-search`: Var olan bütün öğelerin `SearchText`'ini yeniden hesaplatır. Yeni sütun eklendiğinde eski satırları doldurmak için bir kez çalıştırılır. Dosya almaz. Tekrar çalıştırmak zararsız: Değer değişmeyen satır için EF `UPDATE` göndermez.
 
+```powershell
 dotnet run --project TurkiyeSimulasyonu.Importer -- --backfill-search --dry-run
 dotnet run --project TurkiyeSimulasyonu.Importer -- --backfill-search
-dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" --backfill-search
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection $cs --backfill-search
+```
 
 Bakım komutu — `--recount-votes`: `Score1Count`…`Score5Count` sayaçlarını `ItemVotes`'tan yeniden kurar. Gerçek oylar bire bir korunur; tabloda karşılığı olmayan (seed'den kalma sahte) pay silinir. Dosya almaz.
 
@@ -108,17 +130,21 @@ Bakım komutu — `--recount-votes`: `Score1Count`…`Score5Count` sayaçların�
 - Değişmez kural kontrolü: Sayaç toplamı `ItemVotes`'taki satır sayısına eşit değilse transaction geri alınır.
 - `--dry-run` aynı `UPDATE`'i çalıştırıp geri alır. Gerçek çalıştırmadan sonraki `--dry-run`'da `Sayacı değişen öğe: 0` görmek, sayaçla oy tablosunun tutarlı olduğunun kontrolüdür.
 
+```powershell
 dotnet run --project TurkiyeSimulasyonu.Importer -- --recount-votes --dry-run
-dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" --recount-votes --dry-run
-dotnet run --project TurkiyeSimulasyonu.Importer -- --connection "<dış connection string>" --recount-votes
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection $cs --recount-votes --dry-run
+dotnet run --project TurkiyeSimulasyonu.Importer -- --connection $cs --recount-votes
+```
 
 ## Uçlar
+
+Etkileşimli belge: [/swagger](https://turkiye-simulasyonu-api.runasp.net/swagger) · ham dosya: [/openapi/v1.json](https://turkiye-simulasyonu-api.runasp.net/openapi/v1.json). Aşağıdaki tablo kısa sözleşme özeti; cevap gövdeleri, hata şekilleri ve `X-Voter-Id` başlığı belgede.
 
 | Uç | Başarılı | Diğer durumlar |
 | --- | --- | --- |
 | `GET /categories` | 200, `order`'a göre sıralı (eşitse `Id`) | |
 | `GET /categories/{id}` | 200 | olmayan id → 404 (ProblemDetails) |
-| `GET /items` | 200, bütün öğeler (`Id` sırasıyla, arama sayfası için) | |
+| `GET /items` | 200, bütün öğeler (`Id` sırasıyla, sayfasız; arama `/items/search`'te) | |
 | `GET /items?categoryId=` | 200, kategorinin öğeleri (`Id` sırasıyla) | olmayan kategori → 200 + `[]` · boş değer → bütün öğeler |
 | `GET /items/featured`    | 200, her zaman 5 öğe, aktifliğe göre rastgele öğelerle dolar | boşluk kalma durumunda tamamen rastgele öğeler seçilir |
 | `GET /items/search?q=&page=` | 200, `{ items, total, totalPages }`; sayfa başına 12 öğe, `Id` sırasıyla | boş ya da eşleşmeyen `q` → 200 + `total: 0` · son sayfanın ötesi → 200 + boş `items`, `total` aynı · `q` 100 karakterden uzun ya da `page < 1` → 400 |
@@ -184,7 +210,26 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Öğe → yorum (1-N):** Öğe silinirse yorumları da silinir (`Cascade`).
 - **Öğe → oy (1-N):** Öğe silinirse oyları da silinir (Cascade).
 
-## Yeniden Doğma Anketi
+## Kararlar
+
+### Veri modeli kararları
+
+- **Değişmeyen sayı anahtar + ayrı tekil slug.** Tablolar arası bağlar sayıya kurulu; slug düzeltildiğinde hiçbir bağ kopmaz.
+- **Dağılım 5 ayrı sütun.** Oy geldiğinde sayaç veritabanında tek komutla artırılabilsin diye (`SET Score4Count = Score4Count + 1`). Dağılım tek hücrede JSON dizi olarak tutulsaydı bu mümkün olmazdı: değeri okuyup değiştirip geri yazmak gerekirdi ve aynı anda gelen iki oydan biri kaybolabilirdi.
+- **`Order` değil `DisplayOrder`.** `ORDER` SQL'in ayrılmış kelimesi (`ORDER BY`); elle yazılan sorgularda karışıklık çıkarmasın.
+- **Tarihler `DateTimeOffset`.** Değer, UTC'ye göre farkıyla birlikte saklanır; an tek anlamlı tanımlanır.
+- **Uzunluklar.** `Author` 30 ve `Body` 500 sözleşmeden. Diğerleri `db.json`'daki en uzun değerlerin rahatça üstünde seçildi; `Emoji` 32, çünkü ekranda tek görünen bir emoji içeride 10'dan fazla karakter tutabilir.
+- **DTO:** `id = slug`, iç numara dışarı çıkmıyor. Başka bir kaynağa işaret eden alan, o kaynağın slug’ını taşıyor (`categoryId`, `itemId`).
+
+### Arama, sayfalama ve öne çıkanlar
+
+- **Arama ayrı sütunda, dil ayarından bağımsız.** Aranan metin ve kayıttaki metin aynı kurala göre sadeleştirilir (`"Çiğ Köfte"` → `"cig kofte"`) ve arama bu sütunda yapılır. `SearchNormalizer` Türkçe harfleri açık bir tabloyla eşler; `ToLower()` kullanılmaz, çünkü o makinenin dil ayarına bakar: Türkçe ayarlı bir sunucuda `"I"` küçülünce `"ı"`, İngilizce ayarlıda `"i"` olur ve aynı kod iki makinede farklı sonuç verir ("Turkish I problem"). Sütunu `SaveChanges` doldurduğu için DbSeeder, Importer ve API aynı kuralı kullanır, kimse doldurmayı unutamaz.
+- **Arama `/items`'ta değil `/items/search`'te.** `/items?categoryId=` kategori sayfası için sayfalanmamış tam listeyi dönüyor. Aynı uçtan bazen dizi bazen `{ items, total, totalPages }` dönmesi, istemcide union, belge sayfasında ise anlatılamayan bir uç demekti. Arama kendi ucunda; `featured` ile aynı desen.
+- **Sayfalama veritabanında.** Toplam `COUNT(*)` ile, sayfa `OFFSET … FETCH NEXT` ile alınır (EF'te `Skip`/`Take`). İki sorgu atılır: sayfa sayısını bilmek için toplam gerekir, toplamı öğrenmek için bütün satırları çekmek gerekmez. Sayfa boyutu 12.
+- **`featured` gerçek takvim haftasına göre sabit, "son 7 gün" kayan pencereye göre değil.** Havuz, bu ISO haftasının Pazartesi'sinden bugüne yorum almış öğelerden oluşuyor. Seçim, haftanın yıl+numarasından türetilen sabit bir tohumla karıştırılıyor; bu yüzden aynı hafta içindeki her istek aynı 5 öğeyi döndürüyor (sayfa yenilemede değişmiyor), hafta değişince otomatik olarak yeni bir seçki çıkıyor. Haftanın başında havuz küçük/boş olabilir — bu beklenen bir durum, henüz o hafta az şey konuşulmuş demektir.
+- **Rastgele seçim bellekte.** SQL Server'da rastgele sıralamanın yolu `ORDER BY NEWID()`; `EF.Functions.Random()` ise `RAND()`'a çevrilir ve `RAND()` sorgu başına tek değer ürettiği için hiç karıştırmaz. Aday id’ler çekilip haftanın yıl+numarasından tohumlanan new Random(seed).Shuffle (Fisher-Yates) ile karıştırılıyor; aynı tohum aynı sırayı verdiği için seçki hafta boyunca sabit.
+
+### Yeniden Doğma Anketi
 
 - **Girişsiz v1: tarayıcı başına bir oy.** Frontend ilk ziyarette `crypto.randomUUID()` ile bir kimlik üretip saklıyor ve her istekte `X-Voter-Id` başlığıyla gönderiyor. Çerez değil başlık, çünkü frontend ve API farklı alan adlarında; Safari gibi tarayıcılar başka alan adındaki sunucunun çerezini engelliyor. Giriş geldiğinde bu başlığın yerini `Authorization` alacak; gövde (`{ country }`) değişmeyecek.
 - **Kimlik gövdede değil başlıkta**, çünkü "kim olduğun" kaynağın içeriği değil, isteğin bağlamı.
@@ -196,7 +241,7 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **Birincil anahtar sıralı `int`, `VoterId` ayrı tekil index.** SQL Server satırları birincil anahtar sırasına diziyor (clustered index). Rastgele GUID anahtar her yeni satırı ortaya sıkıştırırdı; sıralı sayıda yeni satır hep sona ekleniyor.
 - **`CountryCode` `char(2)`, ASCII.** Hep tam 2 harf; `nvarchar(2)`'den küçük.
 
-## Öğe oyları
+### Öğe oyları
 
 - **Anketin tersine sayaç var.** Dağılım her liste sayfasında okunuyor (1224 öğeye kadar); çok okunan sayı her okumada `GROUP BY` ile sayılmıyor, yazarken bir kez hesaplanıyor.
 - **Gerçek oyların kaynağı `ItemVotes`, sayaçlar onun özeti.** Seed'in sahte başlangıç dağılımı `--recount-votes` ile silindi; yeni öğeler 0 oyla giriyor. Sayaçlar her an `ItemVotes`'tan yeniden kurulabilir.
@@ -206,21 +251,7 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **`DELETE` tekrarlanabilir:** oy yoksa da 204. **`my-votes` koleksiyon:** boşsa 404 değil `[]`.
 - **Tarayıcıdaki eski oylar taşınmadı.** Birkaç tarayıcıdaki birkaç oy için tek seferlik taşıma kodu, depoda kalıcı yük olurdu.
 
-### Kararlar
-
-- **Değişmeyen sayı anahtar + ayrı tekil slug.** Tablolar arası bağlar sayıya kurulu; slug düzeltildiğinde hiçbir bağ kopmaz.
-- **Dağılım 5 ayrı sütun.** Oy geldiğinde sayaç veritabanında tek komutla artırılabilsin diye (`SET Score4Count = Score4Count + 1`). Dağılım tek hücrede JSON dizi olarak tutulsaydı bu mümkün olmazdı: değeri okuyup değiştirip geri yazmak gerekirdi ve aynı anda gelen iki oydan biri kaybolabilirdi.
-- **`Order` değil `DisplayOrder`.** `ORDER` SQL'in ayrılmış kelimesi (`ORDER BY`); elle yazılan sorgularda karışıklık çıkarmasın.
-- **Tarihler `DateTimeOffset`.** Değer, UTC'ye göre farkıyla birlikte saklanır; an tek anlamlı tanımlanır.
-- **Uzunluklar.** `Author` 30 ve `Body` 500 sözleşmeden. Diğerleri `db.json`'daki en uzun değerlerin rahatça üstünde seçildi; `Emoji` 32, çünkü ekranda tek görünen bir emoji içeride 10'dan fazla karakter tutabilir.
-- **DTO:** `id = slug`, iç numara dışarı çıkmıyor. Başka bir kaynağa işaret eden alan, o kaynağın slug’ını taşıyor (`categoryId`, `itemId`).
-- **Arama ayrı sütunda, dil ayarından bağımsız.** Aranan metin ve kayıttaki metin aynı kurala göre sadeleştirilir (`"Çiğ Köfte"` → `"cig kofte"`) ve arama bu sütunda yapılır. `SearchNormalizer` Türkçe harfleri açık bir tabloyla eşler; `ToLower()` kullanılmaz, çünkü o makinenin dil ayarına bakar: Türkçe ayarlı bir sunucuda `"I"` küçülünce `"ı"`, İngilizce ayarlıda `"i"` olur ve aynı kod iki makinede farklı sonuç verir ("Turkish I problem"). Sütunu `SaveChanges` doldurduğu için DbSeeder, Importer ve API aynı kuralı kullanır, kimse doldurmayı unutamaz.
-- **Arama `/items`'ta değil `/items/search`'te.** `/items?categoryId=` kategori sayfası için sayfalanmamış tam listeyi dönüyor. Aynı uçtan bazen dizi bazen `{ items, total, totalPages }` dönmesi, istemcide union, belge sayfasında ise anlatılamayan bir uç demekti. Arama kendi ucunda; `featured` ile aynı desen.
-- **Sayfalama veritabanında.** Toplam `COUNT(*)` ile, sayfa `OFFSET … FETCH NEXT` ile alınır (EF'te `Skip`/`Take`). İki sorgu atılır: sayfa sayısını bilmek için toplam gerekir, toplamı öğrenmek için bütün satırları çekmek gerekmez. Sayfa boyutu 12.
-- **`featured` gerçek takvim haftasına göre sabit, "son 7 gün" kayan pencereye göre değil.** Havuz, bu ISO haftasının Pazartesi'sinden bugüne yorum almış öğelerden oluşuyor. Seçim, haftanın yıl+numarasından türetilen sabit bir tohumla karıştırılıyor; bu yüzden aynı hafta içindeki her istek aynı 5 öğeyi döndürüyor (sayfa yenilemede değişmiyor), hafta değişince otomatik olarak yeni bir seçki çıkıyor. Haftanın başında havuz küçük/boş olabilir — bu beklenen bir durum, henüz o hafta az şey konuşulmuş demektir.
-- **Rastgele seçim bellekte.** SQL Server'da rastgele sıralamanın yolu `ORDER BY NEWID()`; `EF.Functions.Random()` ise `RAND()`'a çevrilir ve `RAND()` sorgu başına tek değer ürettiği için hiç karıştırmaz. Aday id’ler çekilip haftanın yıl+numarasından tohumlanan new Random(seed).Shuffle (Fisher-Yates) ile karıştırılıyor; aynı tohum aynı sırayı verdiği için seçki hafta boyunca sabit.
-
-## CORS
+### CORS
 
 İzin verilen origin listesi `Cors:AllowedOrigins` ayarında: geliştirmede `appsettings.Development.json` içinde `http://localhost:5173`, canlıda `appsettings.Production.json` içinde üç adres: `https://turkiyesimulasyonu.eyupkaya.com` (ana adres), `https://turkiye-simulasyonu-web.keyup017-973.workers.dev` (Cloudflare'ın kendi adresi) ve `https://turkiye-simulasyonu-web.vercel.app` (yedek). Önizleme (Preview) adresleri izinli değil. Origin, adresle birebir aynı olmalı: `https://` ile başlar, sonunda `/` olmaz. Liste tanımlı değilse hiçbir origin'e izin verilmez.
 
@@ -228,7 +259,7 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - Veri değiştiren isteklerden önce tarayıcının gönderdiği `OPTIONS` (preflight) isteğine CORS ara katmanı controller'a gitmeden 204 ile cevap verir.
 - `UseCors`, `UseAuthorization`'dan önce: hata cevapları da izin başlığını taşır ve tarayıcı gerçek durum kodunu JavaScript'e iletir.
 
-## Kararlar
+### API sözleşmesi ve hata yönetimi
 
 - **Sıralama sunucuda.** Select’ten önce ve entity’nin sütunlarıyla. Liste uçları sıralı döner; istemciye güvenilmez. Her sıralamanın son anahtarı benzersiz bir alan (tie-breaker): yorumlar CreatedAt azalan, eşitse Id azalan.
 - **Her kaynak kendi controller'ında** (`categories`, `items`, `comments`).
@@ -248,6 +279,17 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - Doğrulama: DataAnnotations CreateCommentRequest üzerinde; metin kırpıldıktan sonra kontrol edilir; boş author “anonim” olur.
 - Hatalar: AddProblemDetails + GlobalExceptionHandler + UseStatusCodePages; ayrıntı sadece logda.
 - Hız sınırı: IP başına dakikalık sabit pencere, aşılınca 429 + Retry-After. `POST /comments` 5, `PUT /surveys/rebirth/my-vote` 20 (listede gezinip fikir değiştirmek doğal), `PUT`/`DELETE /items/{id}/my-vote` 60 (öğeler arasında gezip puan vermek sık bir iş). Her politika kendi sayacını tutuyor.
+
+### Belge sayfası: OpenAPI ve Swagger UI
+
+- **Production'da açık.** İç API'lerde belge sayfası genelde kapatılır: açık bir sayfa uçların haritasını verir ve onu okuyacak dış kullanıcı yoktur. Bu API herkese açık ve girişsiz; belge tarayıcının ağ sekmesinde görünenden fazlasını söylemiyor, yazma uçları istek sınırlı ve sayfanın varlık sebebi bir görüşmecinin linki açıp API'yi denemesi. Giriş geldiğinde ya da API iç kullanıma dönerse bu iki uç ortama ya da yetkiye bağlanır (`Program.cs`).
+- **Belgeyi Microsoft üretiyor, arayüzü Swashbuckle gösteriyor.** `Microsoft.AspNetCore.OpenApi` belge dosyasını üretir; ekleme olarak yalnızca `Swashbuckle.AspNetCore.SwaggerUI` paketi var. Swashbuckle .NET 9'dan beri şablonlarda yok; iki ayrı belge üreticisi çakışmasın diye yalnızca arayüzü kullanılıyor.
+- **Açıklamalar kodun yanında:** `///` XML yorumları Swagger açıklamalarına dönüşüyor (`GenerateDocumentationFile`). `TreatWarningsAsErrors` açık olduğu için iki yorum uyarısı bilerek kapalı: `CS1591` (her public üyeye yorum iste; migration'lar dahil derlemeyi kırardı) ve `CS1573` (bir parametreyi yazdıysan hepsini yaz; `CancellationToken` gibilere yorum gürültü). Bedeli: eksik yorumu derleyici yakalamıyor.
+- **Bilgi tek yerde.** 429 ve `X-Voter-Id` zorunluluğu her uca elle yazılmadı: `ApiOperationTransformer`, belge üretilirken her ucun `[EnableRateLimiting]` etiketine ve parametrelerine bakıyor. Yeni bir yazma ucuna etiket konunca 429 belgesi kendiliğinden gelir. İstek sınırının sayıları (5/20/60) belgede yok, `Program.cs`'te tek yerde duruyor.
+- **Her uçta 200 de açıkça yazılı.** Bir uca tek bir `ProducesResponseType` yazılınca ASP.NET dönüş tipinden çıkardığı otomatik 200'ü bırakıyor; ilk denemede `GET /categories/{id}`'nin 200'ü belgeden kayboldu.
+- **İçerik türleri gerçeğe çekildi.** ASP.NET her cevap için `text/plain`, `application/json` ve `text/json` yazar. Belgede başarılı cevaplar `application/json`, hatalar `application/problem+json` kalıyor; gerçek cevaplar da böyle dönüyor.
+- **Açıklamalar Türkçe**, çünkü ürün, hata mesajları ve README Türkçe.
+- **Dikkat:** Swagger'daki "Try it out" canlı veritabanına yazar. Yazma uçları istek sınırlı ama sayfadan atılan istek gerçek veri olur; belgenin açıklamasında da yazıyor.
 
 ## Bilinçli borçlar
 
