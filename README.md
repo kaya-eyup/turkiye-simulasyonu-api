@@ -6,7 +6,7 @@
 
 Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu; API bu tablonun hepsini karşılıyor. Tek fark: oylar kullanıcı girişi yerine anonim tarayıcı kimliğiyle çalışıyor ([Bilinçli borçlar](#bilinçli-borçlar)).
 
-[Canlı ve belge](#canlı-ve-belge) · [Mimari](#mimari) · [Çalıştırma](#çalıştırma) · [Canlı ortam ve yayın](#canlı-ortam-ve-yayın) · [Importer](#toplu-veri-ekleme-importer) · [Uçlar](#uçlar) · [Veri modeli](#veri-modeli) · [Kararlar](#kararlar) · [Bilinçli borçlar](#bilinçli-borçlar)
+[Canlı ve belge](#canlı-ve-belge) · [Mimari](#mimari) · [Çalıştırma](#çalıştırma) · [Canlı ortam ve yayın](#canlı-ortam-ve-yayın) · [Importer](#toplu-veri-ekleme-importer) · [Uçlar](#uçlar) · [Veri modeli](#veri-modeli) · [Kararlar](#kararlar) · [Canımı yakan yerler](#canımı-yakan-yerler) · [Bilinçli borçlar](#bilinçli-borçlar)
 
 ## Canlı ve belge
 
@@ -290,6 +290,29 @@ Foreign key sütunlarında (`Items.CategoryId`, `Comments.ItemId`) EF'in varsay�
 - **İçerik türleri gerçeğe çekildi.** ASP.NET her cevap için `text/plain`, `application/json` ve `text/json` yazar. Belgede başarılı cevaplar `application/json`, hatalar `application/problem+json` kalıyor; gerçek cevaplar da böyle dönüyor.
 - **Açıklamalar Türkçe**, çünkü ürün, hata mesajları ve README Türkçe.
 - **Dikkat:** Swagger'daki "Try it out" canlı veritabanına yazar. Yazma uçları istek sınırlı ama sayfadan atılan istek gerçek veri olur; belgenin açıklamasında da yazıyor.
+
+## Canımı yakan yerler
+
+Üç tuzak. İkisi canlıda yaşandı, üçüncüsü baştan bilinen bir tuzaktı ve yazarken önlendi. Her biri: belirti → neden → ne değiştirdim → ne kaldı.
+
+### 1. Migration'ı canlıya uygulamadan yayın: canlıda arama 500 verdi
+
+- **Belirti:** 28 Ekim'de yayından sonra canlıda arama 500 döndü; 29 Ekim'de fark edilene kadar böyle kaldı.
+- **Neden:** Kod yeni `SearchText` sütununu sorguluyordu ama canlı veritabanında sütun yoktu: migration yerelde uygulanmış, canlıya uygulanmamıştı. Kodun yayını ile tablo değişikliği iki ayrı, elle yapılan işti ve biri atlanabiliyordu.
+- **Ne değiştirdim:** Her yayından önce `dotnet ef migrations list` ile bekleyen migration kontrolü artık yayın kuralı ([Canlı ortam ve yayın](#canlı-ortam-ve-yayın)). Yeni sütunun eski satırlarını dolduran `--backfill-search` komutu var.
+- **Ne kaldı:** Kontrol elle. Yayın ile migration'ın birbirine bağlanması (CD) Blok H'de.
+
+### 2. `ı` harfli bir slug kategori sayfasını düşürdü
+
+- **Belirti:** Ekim 2026'da canlıda bir kategori sayfası bozuldu: liste yerine hata ekranı geldi.
+- **Neden:** Veriye `ı` harfli bir slug girmişti. Frontend'in `slugSchema`'sı (`^[a-z0-9]+(-[a-z0-9]+)*$`) tek bir slug'ı reddedince bütün listeyi düşürüyor. Sunucuda bu kuralın karşılığı yoktu: ne API ne veritabanı slug biçimini kontrol ediyordu.
+- **Ne değiştirdim:** Canlıdaki slug'ı elle SQL ile düzelttim. Kalıcı olarak Importer artık aynı kuralı dosya okunurken uyguluyor; kural dışı slug'lı dosya hiçbir şey yazmadan reddediliyor. Canlıda kural dışı başka slug kalmadığını da sorguyla kontrol ettim.
+- **Ne kaldı:** Kontrol yalnızca Importer'da. Elle SQL ile girilen slug'a karşı koruma yok (bkz. [Bilinçli borçlar](#bilinçli-borçlar)).
+
+### 3. Turkish I problem
+
+- **Tuzak:** `ToLower()` ve `ToUpper()` makinenin dil ayarına bakıyor. Türkçe ayarlı bir makinede `"I"` küçülünce `"ı"`, İngilizce ayarlıda `"i"` olur; aynı kod bilgisayarımda ve sunucuda farklı sonuç verebilir. Anket ülke kodunda da aynısı: Türkçe ayarda `"it".ToUpper()` `"İT"` verir ve İtalya'ya oy veren 400 alırdı.
+- **Ne yaptım:** Arama metni `SearchNormalizer`'da dil ayarına bakmayan, Türkçe harfler için açık bir tabloyla sadeleştiriliyor; ülke kodu `ToUpperInvariant` ile büyütülüyor. Birim testleri `SearchNormalizerTests`'te.
 
 ## Bilinçli borçlar
 
