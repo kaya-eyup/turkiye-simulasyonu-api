@@ -17,6 +17,8 @@ public class CommentsController : ControllerBase
         _commentService = commentService;
     }
 
+    /// <summary>Bir öğenin yorumlarını döner, yeniden eskiye.</summary>
+    /// <param name="itemId">Zorunlu: öğenin slug'ı. Olmayan öğe 200 + boş liste verir.</param>
     [ProducesResponseType<List<CommentDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [HttpGet]
@@ -26,6 +28,8 @@ public class CommentsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Bir öğeye yorum ekler.</summary>
+    /// <remarks>`author` en fazla 30 karakter, boşsa `anonim` olur. `body` kırpıldıktan sonra 3-500 karakter olmalı. `id` ve `createdAt` sunucuda üretilir; gövdede gelirlerse yok sayılır. Olmayan öğe 400 döner (`errors.itemId`).</remarks>
     [ProducesResponseType<CommentDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [HttpPost]
