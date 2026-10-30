@@ -60,7 +60,7 @@ builder.Services.AddRateLimiter(options =>
             });
     };
 });
-builder.Services.AddOpenApi();
+builder.Services.AddApiDocs();
 
 var seedPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "Seed", "db.json");
 
@@ -99,13 +99,20 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+// Belge dosyası (/openapi/v1.json) ve onu tarayıcıda gösteren Swagger UI (/swagger) her ortamda açık:
+// API herkese açık, girişsiz ve yazma uçları istek sınırlı; belge ağ sekmesinde görünenden fazlasını söylemiyor.
+// Giriş geldiğinde ya da API iç kullanıma dönerse bu iki satır ortama/yetkiye bağlanır.
+app.MapOpenApi();
 
 app.UseHttpsRedirection();
+
+app.UseSwaggerUI(options =>
+{
+    options.RoutePrefix = "swagger";
+    options.SwaggerEndpoint("/openapi/v1.json", "Türkiye Simülasyonu API v1");
+    options.DocumentTitle = "Türkiye Simülasyonu API";
+    options.DisplayRequestDuration();
+});
 
 // Uç-bazlı limit için routing açıkça yazılmalı; limiter ondan sonra gelir
 app.UseRouting();
@@ -118,6 +125,9 @@ app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Canlı API linkine tıklayan boş sayfa yerine belgeyi görsün
+app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
 app.Run();
 
