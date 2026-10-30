@@ -22,6 +22,8 @@ public class CategoriesController : ControllerBase
         return Ok(result);
     }
 
+    [ProducesResponseType<CategoryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [HttpGet("{id}")]
     public async Task<ActionResult<CategoryDto>> GetById(string id, CancellationToken cancellationToken)
     {

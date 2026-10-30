@@ -24,6 +24,9 @@ public class SurveysController : ControllerBase
         return Ok(results);
     }
 
+    [ProducesResponseType<RebirthVoteDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [HttpGet("my-vote")]
     public async Task<ActionResult<RebirthVoteDto>> GetMyVote(
         [FromHeader(Name = VoterIdHeader.Name)] Guid? voterId,
@@ -46,6 +49,8 @@ public class SurveysController : ControllerBase
         return Ok(vote);
     }
 
+    [ProducesResponseType<RebirthVoteDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [HttpPut("my-vote")]
     [EnableRateLimiting(RateLimitPolicies.SurveyWrite)]
     public async Task<ActionResult<RebirthVoteDto>> PutMyVote(
