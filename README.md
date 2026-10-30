@@ -6,6 +6,10 @@
 
 Kabul listesi web deposundaki **"Backend sözleşmesi"** tablosu; API bu tablonun hepsini karşılıyor. Tek fark: oylar kullanıcı girişi yerine anonim tarayıcı kimliğiyle çalışıyor ([Bilinçli borçlar](#bilinçli-borçlar)).
 
+[![Demo: arama, oy verme, yorum ve anket](https://raw.githubusercontent.com/kaya-eyup/turkiye-simulasyonu-web/main/docs/demo.gif)](https://turkiyesimulasyonu.eyupkaya.com)
+
+Yukarıdaki demo web arayüzünün; API'nin kendisini [Swagger belgesinden](https://turkiye-simulasyonu-api.runasp.net/swagger) deneyebilirsin.
+
 [Canlı ve belge](#canlı-ve-belge) · [Mimari](#mimari) · [Çalıştırma](#çalıştırma) · [Canlı ortam ve yayın](#canlı-ortam-ve-yayın) · [Importer](#toplu-veri-ekleme-importer) · [Uçlar](#uçlar) · [Veri modeli](#veri-modeli) · [Kararlar](#kararlar) · [Canımı yakan yerler](#canımı-yakan-yerler) · [Bilinçli borçlar](#bilinçli-borçlar)
 
 ## Canlı ve belge
