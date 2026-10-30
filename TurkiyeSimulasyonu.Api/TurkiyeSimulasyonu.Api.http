@@ -325,3 +325,13 @@ X-Voter-Id: {{voterId}}
 
 ### Bilerek bozuk: kimlik başlığı yok → 400, errors["X-Voter-Id"]
 GET {{HostAddress}}/items/my-votes
+
+### Belge: OpenAPI dosyası → 200 + application/json, 14 uç (swagger ekranının kaynağı)
+GET {{HostAddress}}/openapi/v1.json
+Accept: application/json
+
+### Belge: Swagger UI → 200 + HTML sayfası
+GET {{HostAddress}}/swagger/index.html
+
+### Gözlem: kök adres → 302, Location: /swagger (canlı linke tıklayan belgeyi görür)
+GET {{HostAddress}}/
