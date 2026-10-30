@@ -17,6 +17,8 @@ public class SurveysController : ControllerBase
         _surveyService = surveyService;
     }
 
+    /// <summary>Yeniden Doğma Anketi sonuçlarını döner.</summary>
+    /// <remarks>Ülke koduna göre oy sayıları, çoktan aza; eşitse koda göre. Sayım her istekte veritabanında yapılır.</remarks>
     [HttpGet]
     public async Task<ActionResult<RebirthResultsDto>> GetResults(CancellationToken cancellationToken)
     {
@@ -24,6 +26,9 @@ public class SurveysController : ControllerBase
         return Ok(results);
     }
 
+    /// <summary>Çağıranın anket oyunu döner.</summary>
+    /// <remarks>Kimlik `X-Voter-Id` başlığından gelir.</remarks>
+    /// <response code="404">Bu kimlik henüz oy vermemiş.</response>
     [ProducesResponseType<RebirthVoteDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -49,6 +54,8 @@ public class SurveysController : ControllerBase
         return Ok(vote);
     }
 
+    /// <summary>Çağıranın anket oyunu belirler ya da değiştirir.</summary>
+    /// <remarks>PUT: aynı isteği tekrarlamak sonucu değiştirmez. İlk oy da değişiklik de 200 döner. `country` ISO 3166-1 alfa-2 kodu olmalı (ör. `TR`); büyük/küçük harf fark etmez.</remarks>
     [ProducesResponseType<RebirthVoteDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [HttpPut("my-vote")]

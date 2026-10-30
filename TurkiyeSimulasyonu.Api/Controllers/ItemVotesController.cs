@@ -20,6 +20,8 @@ public class ItemVotesController : ControllerBase
 
     // "my-votes" sabit bir parça: yönlendirme sabit parçayı {id}'den önce dener,
     // bu yüzden bu istek ItemsController'daki GET /items/{id}'ye düşmez
+    /// <summary>Çağıranın bütün öğe oylarını döner.</summary>
+    /// <remarks>Hiç oy yoksa 200 + boş liste.</remarks>
     [ProducesResponseType<List<ItemVoteDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [HttpGet("my-votes")]
@@ -37,6 +39,10 @@ public class ItemVotesController : ControllerBase
         return Ok(votes);
     }
 
+    /// <summary>Bir öğeye puan verir ya da puanı değiştirir.</summary>
+    /// <param name="id">Öğenin slug'ı.</param>
+    /// <remarks>`stars` 1-5 olmalı. Oy satırı ve öğenin dağılım sayaçları aynı transaction'da yazılır. İlk oy da değişiklik de 200 döner.</remarks>
+    /// <response code="404">Bu slug'la öğe yok.</response>
     [ProducesResponseType<ItemVoteDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -63,6 +69,10 @@ public class ItemVotesController : ControllerBase
         return Ok(vote);
     }
 
+    /// <summary>Çağıranın bir öğedeki oyunu siler.</summary>
+    /// <param name="id">Öğenin slug'ı.</param>
+    /// <remarks>Oy zaten yoksa da 204 döner.</remarks>
+    /// <response code="404">Bu slug'la öğe yok.</response>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

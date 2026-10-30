@@ -6,6 +6,12 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<UserSecretsId>d84eb258-d65e-437b-a08e-46ea75800712</UserSecretsId>
+		<!-- XML yorumları (///) Swagger'daki açıklamalara dönüşüyor -->
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<!-- TreatWarningsAsErrors açık olduğu için iki yorum uyarısı bilerek kapalı:
+		     CS1591: "public her şeye yorum yaz" (yorumsuz her sınıf, migration'lar dahil, derlemeyi kırardı).
+		     CS1573: "bir parametreyi yazdıysan hepsini yaz" (CancellationToken gibi bariz parametrelere yorum yazmak gürültü). -->
+		<NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

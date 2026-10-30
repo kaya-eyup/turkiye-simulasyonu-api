@@ -5,7 +5,10 @@ public static class ApiDocs
 {
     public static IServiceCollection AddApiDocs(this IServiceCollection services)
     {
-        services.AddOpenApi();
+        services.AddOpenApi(options =>
+        {
+            options.AddDocumentTransformer<ApiDocInfoTransformer>();
+        });
         return services;
     }
 }
