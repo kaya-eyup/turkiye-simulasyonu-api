@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using TurkiyeSimulasyonu.Api.Data;
 using TurkiyeSimulasyonu.Api.Entities;
 using TurkiyeSimulasyonu.Api.Search;
@@ -39,6 +40,12 @@ const string DefaultLocalConnection =
 // ItemsController'daki sabit yollar (/items/featured, /items/search, /items/my-votes):
 // bu slug'la açılan öğe kendi adresinden erişilemez. Veritabanı harf duyarsız: KEBAP = kebap.
 var reservedSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "featured", "search", "my-votes" };
+
+// Slug biçimi: küçük ASCII harf ve rakam, parçalar tek tire ile ayrılır. Frontend'in slugSchema'sıyla
+// birebir aynı kural (^[a-z0-9]+(?:-[a-z0-9]+)*$); uymayan tek slug bütün listeyi düşürür.
+// Neden $ değil \z: .NET'te $ satır sonundaki "\n"den önce de eşleşir ("kebap\n" geçerdi), \z yalnızca metnin sonu.
+// IgnoreCase yok: [a-z] büyük harf ve Türkçe harf kabul etmesin; CultureInvariant: makinenin dili karışmasın.
+var slugFormat = new Regex(@"\A[a-z0-9]+(?:-[a-z0-9]+)*\z", RegexOptions.CultureInvariant);
 
 var remaining = new List<string>(args);
 string? connectionString = null;
@@ -294,6 +301,9 @@ foreach (var file in files)
 
     if (batch.Category is { } cat)
     {
+        if (!slugFormat.IsMatch(cat.Id))
+            throw new InvalidDataException($"Kategori '{cat.Id}': slug biçimi geçersiz (yalnızca küçük a-z, 0-9 ve tek tire; ör. 'cig-kofte').");
+
         if (categoriesBySlug.TryGetValue(cat.Id, out var existingCat))
         {
             Console.WriteLine($"  [kategori] zaten var, dokunulmadı: {cat.Id} ({existingCat.Name})");
@@ -316,6 +326,8 @@ foreach (var file in files)
 
     foreach (var item in batch.Items)
     {
+        if (!slugFormat.IsMatch(item.Id))
+            throw new InvalidDataException($"'{item.Id}': slug biçimi geçersiz (yalnızca küçük a-z, 0-9 ve tek tire; ör. 'cig-kofte').");
         // /items/featured, /items/search, /items/my-votes ile aynı slug'lı öğe kendi adresinden açılamaz
         if (reservedSlugs.Contains(item.Id))
             throw new InvalidDataException($"'{item.Id}': ayrılmış kelime, öğe slug'ı olamaz.");
