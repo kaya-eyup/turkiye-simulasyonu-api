@@ -8,6 +8,7 @@ public static class ApiDocs
         services.AddOpenApi(options =>
         {
             options.AddDocumentTransformer<ApiDocInfoTransformer>();
+            options.AddOperationTransformer<ApiOperationTransformer>();
         });
         return services;
     }
