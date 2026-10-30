@@ -1,28 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="test-bozuk.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="test-bozuk.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- AppDbContext, Entities (Category/Item) ve Program.cs'teki UseSqlServer burada da kullanılıyor;
+	<ItemGroup>
+		<!-- AppDbContext, Entities (Category/Item) ve Program.cs'teki UseSqlServer burada da kullanılıyor;
          kodu ikinci kez yazmak yerine Api projesini referans alıyoruz. -->
-    <ProjectReference Include="..\TurkiyeSimulasyonu.Api\TurkiyeSimulasyonu.Api.csproj" />
-  </ItemGroup>
+		<ProjectReference Include="..\TurkiyeSimulasyonu.Api\TurkiyeSimulasyonu.Api.csproj" />
+	</ItemGroup>
 
 </Project>
